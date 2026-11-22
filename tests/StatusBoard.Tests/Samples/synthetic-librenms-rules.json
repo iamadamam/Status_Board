@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "count": 2,
+  "rules": [
+    { "id": "4", "name": "Port utilisation over 90%", "severity": "critical", "disabled": 0 },
+    { "id": "9", "name": "Device Down! Due to no ICMP response.", "severity": "critical", "disabled": 0 }
+  ]
+}

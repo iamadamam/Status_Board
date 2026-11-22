@@ -1,0 +1,39 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- "Hacker": a phosphor-green terminal. Monospace everywhere, black screen, green text and outlines. Problems keep their own
+         amber/orange/red so an outage still jumps out (colour plus icon plus words, never colour alone). -->
+    <FontFamily x:Key="UiFont">Cascadia Mono, Consolas, Lucida Console</FontFamily>
+    <FontFamily x:Key="DisplayFont">Cascadia Mono, Consolas, Lucida Console</FontFamily>
+    <Color x:Key="BgColor">#000000</Color>
+    <SolidColorBrush x:Key="Bg" Color="#000000"/>
+    <SolidColorBrush x:Key="Surface" Color="#010801"/>
+    <SolidColorBrush x:Key="SurfaceAlt" Color="#000400"/>
+    <SolidColorBrush x:Key="SurfaceHover" Color="#031403"/>
+    <SolidColorBrush x:Key="Stroke" Color="#0E3A12"/>
+    <SolidColorBrush x:Key="StrokeStrong" Color="#17611E"/>
+    <SolidColorBrush x:Key="Text" Color="#4DFF6A"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#26B843"/>
+    <SolidColorBrush x:Key="TextFaint" Color="#1A8A32"/>
+    <SolidColorBrush x:Key="Accent" Color="#39FF14"/>
+    <SolidColorBrush x:Key="AccentHover" Color="#8CFF73"/>
+    <SolidColorBrush x:Key="AccentSoft" Color="#062B08"/>
+    <SolidColorBrush x:Key="OnAccent" Color="#001A00"/>
+    <SolidColorBrush x:Key="Scrim" Color="#D9000000"/>
+    <SolidColorBrush x:Key="ShadowNear" Color="#2639FF14"/>
+    <SolidColorBrush x:Key="ShadowFar" Color="#0F39FF14"/>
+    <SolidColorBrush x:Key="LogoTile" Color="#C9F5CF"/>
+    <SolidColorBrush x:Key="Selection" Color="#39FF14"/>
+
+    <SolidColorBrush x:Key="Status.Operational" Color="#39FF14"/>
+    <SolidColorBrush x:Key="Status.Operational.Soft" Color="#062B08"/>
+    <SolidColorBrush x:Key="Status.Maintenance" Color="#00E5FF"/>
+    <SolidColorBrush x:Key="Status.Maintenance.Soft" Color="#002A30"/>
+    <SolidColorBrush x:Key="Status.Degraded" Color="#FFD400"/>
+    <SolidColorBrush x:Key="Status.Degraded.Soft" Color="#2B2400"/>
+    <SolidColorBrush x:Key="Status.PartialOutage" Color="#FF8A00"/>
+    <SolidColorBrush x:Key="Status.PartialOutage.Soft" Color="#2E1700"/>
+    <SolidColorBrush x:Key="Status.MajorOutage" Color="#FF3B3B"/>
+    <SolidColorBrush x:Key="Status.MajorOutage.Soft" Color="#330606"/>
+    <SolidColorBrush x:Key="Status.Unknown" Color="#26B843"/>
+    <SolidColorBrush x:Key="Status.Unknown.Soft" Color="#031A06"/>
+</ResourceDictionary>

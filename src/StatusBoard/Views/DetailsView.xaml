@@ -1,0 +1,137 @@
+<UserControl x:Class="StatusBoard.Views.DetailsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:StatusBoard.Views"
+             xmlns:vm="clr-namespace:StatusBoard.ViewModels">
+    <!-- One vendor's details. DataContext: CardViewModel. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" Margin="20,18,12,4">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource VendorBadge}" Margin="0,0,12,0"/>
+            <TextBlock Grid.Column="1" Text="{Binding Name}" FontFamily="{DynamicResource DisplayFont}" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <Button Grid.Column="2" Style="{StaticResource LinkButton}" Padding="8" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}"
+                    ToolTip="Close (Esc)" AutomationProperties.Name="Close details"
+                    Command="{Binding DataContext.CloseDetailsCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                <TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" FontSize="13"/>
+            </Button>
+        </Grid>
+
+        <!-- Overview | Components -->
+        <Border DockPanel.Dock="Top" Margin="20,8,20,4" HorizontalAlignment="Left" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="7" Padding="2"
+                Background="{DynamicResource SurfaceAlt}">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton Style="{StaticResource SegmentButton}" GroupName="{Binding Id, StringFormat='tab-{0}'}" IsChecked="{Binding ShowOverview, Mode=OneWay}"
+                             Command="{Binding ShowOverviewCommand}" Content="Overview" Padding="12,4"/>
+                <RadioButton x:Name="ComponentsTab" Style="{StaticResource SegmentButton}" GroupName="{Binding Id, StringFormat='tab-{0}'}" IsChecked="{Binding ShowComponents, Mode=OneWay}"
+                             Command="{Binding ShowComponentsCommand}" Content="{Binding ComponentsTabText}" Padding="12,4"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Components: everything the vendor lists (after your filter), problems first -->
+        <DockPanel Visibility="{Binding ShowComponents, Converter={StaticResource BoolToVis}}">
+            <StackPanel DockPanel.Dock="Top" Margin="20,8,20,8">
+                <Border CornerRadius="8" Padding="10,7" Margin="0,0,0,8" Background="{DynamicResource AccentSoft}" Visibility="{Binding IsFiltered, Converter={StaticResource BoolToVis}}">
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Text}"
+                               Text="Showing only the components you chose for this vendor. Change them in Vendors."/>
+                </Border>
+                <Grid Visibility="{Binding HasAllComponents, Converter={StaticResource BoolToVis}}">
+                    <TextBox Text="{Binding ComponentSearch, UpdateSourceTrigger=PropertyChanged}" Padding="28,6,8,6" AutomationProperties.Name="Search components"/>
+                    <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                </Grid>
+            </StackPanel>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <StackPanel Margin="20,0,20,20">
+                    <TextBlock Text="{Binding ComponentsEmptyText}" Style="{StaticResource Muted}" Visibility="{Binding HasAllComponents, Converter={StaticResource InvBoolToVis}}"/>
+                    <ItemsControl ItemsSource="{Binding ComponentsShown}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource Stroke}" BorderThickness="0,0,0,1" Padding="2,7">
+                                    <DockPanel>
+                                        <v:StatusIndicator DockPanel.Dock="Right" Status="{Binding Status}" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}" FontSize="12.5" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding MoreAllComponentsText}" Style="{StaticResource Muted}" Margin="0,8,0,0" Visibility="{Binding MoreAllComponentsText, Converter={StaticResource NullToCollapsed}}"/>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Visibility="{Binding ShowOverview, Converter={StaticResource BoolToVis}}">
+            <StackPanel Margin="20,8,20,20">
+                <v:StatusIndicator Style="{StaticResource StatusLarge}" Status="{Binding Status}" OverrideText="{Binding StatusOverrideText}"/>
+                <!-- Where the incident is: "Investigating – the cause isn't known yet" -->
+                <StackPanel Margin="52,4,0,0" Visibility="{Binding StageText, Converter={StaticResource NullToCollapsed}}">
+                    <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" HorizontalAlignment="Left"/>
+                    <TextBlock Text="{Binding StageDescription}" Style="{StaticResource Muted}" Margin="0,5,0,0"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Headline}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                <WrapPanel Margin="0,4,0,0">
+                    <TextBlock Text="{Binding CheckedText}" Style="{StaticResource Muted}" Margin="0,0,12,0"/>
+                    <TextBlock Text="{Binding SourceWarning}" FontSize="12" Foreground="{DynamicResource Status.Degraded}" Visibility="{Binding SourceWarning, Converter={StaticResource NullToCollapsed}}"/>
+                </WrapPanel>
+                <Button Style="{StaticResource SubtleButton}" HorizontalAlignment="Left" Margin="0,14,0,4" Command="{Binding OpenStatusPageCommand}" ToolTip="{Binding StatusPageUrl}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Open official status page"/>
+                        <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="8,2,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <TextBlock Text="ACTIVE INCIDENTS" Style="{StaticResource SectionLabel}" Margin="0,18,0,8" Visibility="{Binding HasIncidents, Converter={StaticResource BoolToVis}}"/>
+                <ItemsControl ItemsSource="{Binding Incidents}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:IncidentViewModel}">
+                            <Border Background="{DynamicResource SurfaceAlt}" CornerRadius="9" Padding="14,12" Margin="0,0,0,8" BorderBrush="{DynamicResource Stroke}" BorderThickness="1">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <v:StatusIndicator Status="{Binding Status}"/>
+                                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" Margin="6,0,0,0"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                    <TextBlock Text="{Binding Meta}" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                                    <TextBlock Text="{Binding Components}" Style="{StaticResource Muted}" Margin="0,2,0,0" Visibility="{Binding Components, Converter={StaticResource NullToCollapsed}}"/>
+                                    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="19" Visibility="{Binding Summary, Converter={StaticResource NullToCollapsed}}"/>
+                                    <Button Style="{StaticResource LinkButton}" Margin="0,10,0,0" Visibility="{Binding HasUrl, Converter={StaticResource BoolToVis}}"
+                                            Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding Url}" ToolTip="{Binding Url}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="View incident"/>
+                                            <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="11" Margin="6,2,0,0"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="AFFECTED COMPONENTS" Style="{StaticResource SectionLabel}" Visibility="{Binding HasAffectedComponents, Converter={StaticResource BoolToVis}}"/>
+                <ItemsControl ItemsSource="{Binding AffectedComponents}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,0,0,6">
+                                <v:StatusIndicator Style="{StaticResource StatusIcon}" Status="{Binding Status}" FontSize="13" Margin="0,2,8,0" VerticalAlignment="Top"/>
+                                <TextBlock Text="{Binding Name}" FontSize="12.5" TextWrapping="Wrap"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding MoreComponentsText}" Style="{StaticResource Muted}" Visibility="{Binding MoreComponentsText, Converter={StaticResource NullToCollapsed}}"/>
+
+                <TextBlock Text="UNREACHABLE SOURCES" Style="{StaticResource SectionLabel}" Visibility="{Binding HasFailedSources, Converter={StaticResource BoolToVis}}"/>
+                <ItemsControl ItemsSource="{Binding FailedSources}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" FontSize="12.5">
+                                <Run Text="{Binding SourceLabel, Mode=OneWay}" FontWeight="SemiBold"/><Run Text=" – " Foreground="{DynamicResource TextMuted}"/><Run Text="{Binding Error, Mode=OneWay}" Foreground="{DynamicResource TextMuted}"/>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="Everything this vendor reports is operational." Style="{StaticResource Muted}" Margin="0,14,0,0" Visibility="{Binding HasNothingToShow, Converter={StaticResource BoolToVis}}"/>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

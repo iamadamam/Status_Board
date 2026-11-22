@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "message": "",
+  "count": 3,
+  "alerts": [
+    { "id": "101", "device_id": "12", "rule_id": "4", "state": "1", "alerted": "1", "open": "1", "timestamp": "2026-11-19 09:15:00", "hostname": "core-sw-01.lan", "severity": "critical", "name": "Port utilisation over 90%" },
+    { "id": "102", "device_id": "7", "rule_id": "9", "state": "1", "alerted": "1", "open": "1", "timestamp": "2026-11-19 10:02:31" },
+    { "id": "103", "device_id": "30", "rule_id": "4", "state": "1", "alerted": "1", "open": "1", "timestamp": "2026-11-19 11:44:10", "hostname": "fw-edge.lan", "severity": "warning", "name": "Disk usage over 80%", "note": "Expected – log rotation runs at 12:00" }
+  ]
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>StatusBoard</AssemblyName>
+    <RootNamespace>StatusBoard</RootNamespace>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyTitle>Status Board</AssemblyTitle>
+    <Description>Local dashboard of public cloud and SaaS vendor status pages</Description>
+    <!-- Lighter runtime for a small always-on app: no background GC thread, and no profiling data kept for re-optimising code. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <ProjectReference Include="..\StatusBoard.Core\StatusBoard.Core.csproj" />
+  </ItemGroup>
+</Project>

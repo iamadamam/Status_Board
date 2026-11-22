@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xml:lang="en-US" xmlns="http://www.w3.org/2005/Atom">
+  <id>tag:status.bitwarden.com,2005:/state_feed/feed</id>
+  <link rel="alternate" type="text/html" href="https://status.bitwarden.com"/>
+  <link rel="self" type="application/atom+xml" href="https://status.bitwarden.com/state_feed/feed"/>
+  <title>Bitwarden Status</title>
+  <updated>2026-11-18T22:07:03-05:00</updated>
+  <author>
+    <name>state</name>
+  </author>
+  <entry>
+    <id>tag:status.bitwarden.com,2005:State::FeedNotifier::Entry/6afe67d7be1565f1f4f29686</id>
+    <published>2026-11-18T22:07:03-05:00</published>
+    <updated>2026-11-18T22:07:03-05:00</updated>
+    <link rel="alternate" type="text/html" href="https://status.bitwarden.com/issues/6afe67d7be1565f1f4f29686"/>
+    <title>[Information] Bitwarden self-host patch available for nginx CVE-2026-123007 and CVE-2026-123633: Known Issues (Announcements)</title>
+    <content type="html">&lt;p&gt;A set of nginx vulnerabilities were disclosed on November 18, 2026 that impacts self-hosted Bitwarden installations. &lt;a href="https://community.bitwarden.com/t/bitwarden-self-host-patch-available-for-nginx-cve-2026-123007-and-cve-2026-123633/104165"&gt;https://community.bitwarden.com/t/bitwarden-self-host-patch-available-for-nginx-cve-2026-123007-and-cve-2026-123633/104165&lt;/a&gt;&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <id>tag:status.bitwarden.com,2005:State::FeedNotifier::Entry/6afb7cf2e42498d0227f9909</id>
+    <published>2026-11-16T17:00:18-05:00</published>
+    <updated>2026-11-17T23:00:00-05:00</updated>
+    <link rel="alternate" type="text/html" href="https://status.bitwarden.com/issues/6afb7cf2e42498d0227f9909"/>
+    <title>[Ended] Maintenance Window: US Identity Service (US Cloud Services) and 5 others</title>
+    <content type="html">&lt;h4 id="release-information"&gt;Release information&lt;/h4&gt;
+&lt;p&gt;In preparation for the new release, Bitwarden will be undergoing server and web maintenance from 9-11 PM EST (2-4 AM UTC next day).&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <id>tag:status.bitwarden.com,2005:State::FeedNotifier::Entry/6af2429109ee8c752bdefef6</id>
+    <published>2026-11-09T17:00:49-05:00</published>
+    <updated>2026-11-09T17:43:39-05:00</updated>
+    <link rel="alternate" type="text/html" href="https://status.bitwarden.com/issues/6af2429109ee8c752bdefef6"/>
+    <title>[Cancelled] Maintenance Window: US Identity Service (US Cloud Services) and 5 others</title>
+    <content type="html">&lt;p&gt;The next release is scheduled for November 17th, 2026.&lt;/p&gt;
+</content>
+  </entry>
+  <entry>
+    <id>tag:status.bitwarden.com,2005:State::FeedNotifier::Entry/6adfbf848f1441ef2c395271</id>
+    <published>2026-10-26T17:00:52-04:00</published>
+    <updated>2026-10-27T23:00:00-04:00</updated>
+    <link rel="alternate" type="text/html" href="https://status.bitwarden.com/issues/6adfbf848f1441ef2c395271"/>
+    <title>[Ended] Maintenance Window: US Identity Service (US Cloud Services) and 5 others</title>
+    <content type="html">&lt;h4 id="release-information"&gt;Release information&lt;/h4&gt;
+&lt;p&gt;In preparation for the new release, Bitwarden will be undergoing server and web maintenance from 9-11 PM EDT (1-3 AM UTC next day).&lt;/p&gt;
+</content>
+  </entry>
+</feed>

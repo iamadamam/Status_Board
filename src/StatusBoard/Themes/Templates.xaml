@@ -1,0 +1,165 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:v="clr-namespace:StatusBoard.Views"
+                    xmlns:vm="clr-namespace:StatusBoard.ViewModels">
+
+    <!-- Logo tile, or initials when no logo could be found -->
+    <DataTemplate x:Key="VendorBadge" DataType="{x:Type vm:CardViewModel}">
+        <Grid Width="38" Height="38">
+            <Border CornerRadius="9" Background="{DynamicResource LogoTile}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" Padding="5"
+                    Visibility="{Binding HasLogo, Converter={StaticResource BoolToVis}}">
+                <Image Source="{Binding Logo}" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} logo'}"/>
+            </Border>
+            <Border CornerRadius="9" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" Padding="5"
+                    Visibility="{Binding HasLogo, Converter={StaticResource InvBoolToVis}}">
+                <Viewbox StretchDirection="DownOnly"><TextBlock Text="{Binding Monogram}" FontWeight="Bold" FontSize="12.5" Foreground="{DynamicResource TextMuted}"/></Viewbox>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Incident stage pill ("Investigating", "Monitoring", "In progress"…): quiet outline; green-tinted once a fix is being checked.
+         DataContext: anything with StageText, StageRecovering and StageDescription. Collapsed when there's no stage. -->
+    <DataTemplate x:Key="StagePill">
+        <Border x:Name="Pill" CornerRadius="9" Padding="7,1,8,2" BorderThickness="1" BorderBrush="{DynamicResource StrokeStrong}" Background="Transparent"
+                VerticalAlignment="Center" HorizontalAlignment="Left" ToolTip="{Binding StageDescription}"
+                Visibility="{Binding StageText, Converter={StaticResource NullToCollapsed}}"
+                AutomationProperties.Name="{Binding StageText, StringFormat='Stage: {0}'}">
+            <TextBlock x:Name="Txt" Text="{Binding StageText}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis"/>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding StageRecovering}" Value="True">
+                <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Status.Operational.Soft}"/>
+                <Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource Status.Operational.Soft}"/>
+                <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource Status.Operational}"/>
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Small round logo for chips -->
+    <DataTemplate x:Key="VendorBadgeSmall" DataType="{x:Type vm:CardViewModel}">
+        <Grid Width="24" Height="24">
+            <Border CornerRadius="12" Background="{DynamicResource LogoTile}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" Padding="3.5"
+                    Visibility="{Binding HasLogo, Converter={StaticResource BoolToVis}}">
+                <Image Source="{Binding Logo}" RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Border>
+            <Border CornerRadius="12" Background="{DynamicResource SurfaceAlt}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" Padding="3"
+                    Visibility="{Binding HasLogo, Converter={StaticResource InvBoolToVis}}">
+                <Viewbox StretchDirection="DownOnly"><TextBlock Text="{Binding Monogram}" FontWeight="Bold" FontSize="9" Foreground="{DynamicResource TextMuted}"/></Viewbox>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Tile: quiet when healthy; problems get a wash, a tinted edge and a beating dot -->
+    <DataTemplate x:Key="VendorCard" DataType="{x:Type vm:CardViewModel}">
+        <Grid Margin="0,0,14,14" Width="{Binding DataContext.CardWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Style="{StaticResource LiftOnHover}">
+            <!-- Two translucent layers instead of a blur Effect (Effects re-render whenever anything animates nearby) -->
+            <Border CornerRadius="16" Background="{DynamicResource ShadowFar}" Margin="-2,1,-2,-5" IsHitTestVisible="False"/>
+            <Border CornerRadius="15" Background="{DynamicResource ShadowNear}" Margin="-1,0,-1,-2" IsHitTestVisible="False"/>
+            <Border CornerRadius="14" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1"/>
+            <v:StatusIndicator Style="{StaticResource StatusWash}" Status="{Binding Status}" Visibility="{Binding IsProblem, Converter={StaticResource BoolToVis}}"/>
+            <v:StatusIndicator Style="{StaticResource StatusOutline}" Status="{Binding Status}" Visibility="{Binding IsProblem, Converter={StaticResource BoolToVis}}"/>
+            <Button Style="{StaticResource CardButton}" Margin="1" CommandParameter="{Binding}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} – show details'}"
+                    Command="{Binding DataContext.SelectCardCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource VendorBadge}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" FontFamily="{DynamicResource DisplayFont}" TextTrimming="CharacterEllipsis"/>
+                        <!-- Status, then the stage pill; on narrow tiles the pill moves to its own line rather than overflow or be cut short -->
+                        <WrapPanel Margin="0,2,0,0">
+                            <v:StatusIndicator Style="{StaticResource StatusText}" Status="{Binding Status}" OverrideText="{Binding StatusOverrideText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" VerticalAlignment="Center" Margin="0,1,0,1"/>
+                        </WrapPanel>
+                    </StackPanel>
+                    <v:StatusIndicator Grid.Column="2" Style="{StaticResource StatusDot}" Status="{Binding Status}" VerticalAlignment="Top" Margin="8,0,0,0"/>
+                    <DockPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,11,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="10,0,0,0" ToolTip="{Binding SourceWarning}"
+                                    Visibility="{Binding SourceWarning, Converter={StaticResource NullToCollapsed}}">
+                            <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="{DynamicResource Status.Degraded}" Margin="0,2,4,0"/>
+                            <TextBlock Text="Partial data" FontSize="12" Foreground="{DynamicResource Status.Degraded}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ShortHeadline}" FontSize="12.5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextMuted}" ToolTip="{Binding Headline}"/>
+                    </DockPanel>
+                    <!-- Which services are affected (e.g. one FortiCloud product), so a vendor-wide status isn't misleading -->
+                    <DockPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,6,0,0" ToolTip="{Binding AffectedServicesTooltip}"
+                               Visibility="{Binding HasAffectedServices, Converter={StaticResource BoolToVis}}"
+                               AutomationProperties.Name="{Binding AffectedServicesText, StringFormat='Affects {0}'}">
+                        <v:StatusIndicator Style="{StaticResource StatusIcon}" Status="{Binding AffectedServicesStatus}" FontSize="11.5" Margin="0,1,6,0" VerticalAlignment="Center"/>
+                        <TextBlock FontSize="12.5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                            <Run Text="Affects " Foreground="{DynamicResource TextMuted}"/><Run Text="{Binding AffectedServicesText, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource Text}"/>
+                        </TextBlock>
+                    </DockPanel>
+                </Grid>
+            </Button>
+            <Border CornerRadius="14" BorderBrush="{DynamicResource Selection}" BorderThickness="2" IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- List view row (compact table): logo, name, status + stage, what's wrong, last checked. Click opens details. -->
+    <DataTemplate x:Key="VendorRow" DataType="{x:Type vm:CardViewModel}">
+        <Grid Margin="0,0,14,6">
+            <Border CornerRadius="10" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1"/>
+            <v:StatusIndicator Style="{StaticResource StatusWash}" Status="{Binding Status}" Visibility="{Binding IsProblem, Converter={StaticResource BoolToVis}}" Opacity="0.6"/>
+            <Button Style="{StaticResource CardButton}" Margin="1" CommandParameter="{Binding}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} – show details'}"
+                    Command="{Binding DataContext.SelectCardCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Padding="0">
+                <!-- Two compact lines: [logo] Name ……… status · stage  ●  /  what's wrong (or the check reading) -->
+                <Grid Margin="-4,-6,0,-6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <ContentPresenter Grid.RowSpan="2" Content="{Binding}" ContentTemplate="{StaticResource VendorBadgeSmall}" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <v:StatusIndicator Status="{Binding Status}" OverrideText="{Binding StatusOverrideText}" VerticalAlignment="Center"/>
+                        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,3,0,0" FontSize="12.5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextMuted}" ToolTip="{Binding Headline}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="{Binding ShortHeadline}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasAffectedServices}" Value="True"><Setter Property="Text" Value="{Binding AffectedServicesText, StringFormat='Affects {0}'}"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <v:StatusIndicator Grid.Column="3" Style="{StaticResource StatusDot}" Status="{Binding Status}" Width="16" Height="16" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+            </Button>
+            <Border CornerRadius="10" BorderBrush="{DynamicResource Selection}" BorderThickness="2" IsHitTestVisible="False"
+                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}"/>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Ticker item: [icon] Vendor [status] Headline — latest update · Updated 14:02. Cached as a bitmap: scrolling moves pictures, not text. -->
+    <DataTemplate x:Key="TickerItem" DataType="{x:Type vm:TickerItemViewModel}">
+        <Button Command="{Binding DataContext.ShowVendorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Card}"
+                ToolTip="{Binding Text}" AutomationProperties.Name="{Binding Text}" Cursor="Hand" FocusVisualStyle="{StaticResource FocusRing}">
+            <Button.CacheMode><BitmapCache RenderAtScale="1" SnapsToDevicePixels="False" EnableClearType="False"/></Button.CacheMode>
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="10,0"><ContentPresenter VerticalAlignment="Center"/></Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+            <StackPanel Orientation="Horizontal" Height="46">
+                <v:StatusIndicator Style="{StaticResource StatusIcon}" Status="{Binding Status}" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding VendorName}" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text}" Margin="0,0,8,0"/>
+                <v:StatusIndicator Status="{Binding Status}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <Border Width="4"/>
+                <TextBlock Text="{Binding Headline}" VerticalAlignment="Center" Foreground="{DynamicResource Text}"/>
+                <TextBlock Text=" — " VerticalAlignment="Center" Foreground="{DynamicResource TextFaint}" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}"/>
+                <TextBlock Text="{Binding Detail}" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}"/>
+                <TextBlock Text="{Binding UpdatedText}" VerticalAlignment="Center" Foreground="{DynamicResource TextFaint}" FontSize="12" Margin="10,1,0,0"
+                           Visibility="{Binding UpdatedText, Converter={StaticResource NullToCollapsed}}"/>
+                <Ellipse Width="4" Height="4" Fill="{DynamicResource StrokeStrong}" VerticalAlignment="Center" Margin="26,0,16,0"/>
+            </StackPanel>
+        </Button>
+    </DataTemplate>
+</ResourceDictionary>
