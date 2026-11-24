@@ -82,14 +82,14 @@ Everything is stored next to the exe: `profiles.json` and one settings file per 
 Windows 10/11 and the .NET 10 SDK (`winget install Microsoft.DotNet.SDK.10`).
 
 ```powershell
-.\build.ps1                      # tests, then artifacts\StatusBoard\ + artifacts\StatusBoard-v1.0-win-x64.zip (+ .sha256)
-.\build.ps1 -FrameworkDependent  # ~1 MB exe; needs the .NET 10 Desktop Runtime on the PC
-.\build.ps1 -SingleExe           # one file; .NET extracts 5 native DLLs to %TEMP%\.net on first run
-.\build.ps1 -Compact             # compressed exe: half the disk space, ~70 MB more RAM while running
-dotnet test                      # unit tests only (saved responses, no network)
+.\build.ps1                          # tests, then artifacts\StatusBoard\ + artifacts\StatusBoard-v1.0-win-x64.zip (+ .sha256)
+.\build.ps1 -FrameworkDependent      # ~1 MB exe; needs the .NET 10 Desktop Runtime on the PC
+.\build.ps1 -SingleExe               # one file; .NET extracts 5 native DLLs to %TEMP%\.net on first run
+.\build.ps1 -Compact                 # compressed exe: half the disk space, ~70 MB more RAM while running
+dotnet test tests/StatusBoard.Tests  # unit tests only (saved responses, no network)
 ```
 
-Opt-in live check of every built-in source: `$env:STATUSBOARD_LIVE='1'; dotnet test`.
+Opt-in live check of every built-in source: `$env:STATUSBOARD_LIVE='1'; dotnet test tests/StatusBoard.Tests`.
 
 **UI self-test:** drives the real window through every flow (details panel, splitter, narrow/wide, settings, themes,
 profiles, setup, tray, vendors, checks, groups, tile sizes, TV mode, scripted outages through the ticker, frame rate) and
