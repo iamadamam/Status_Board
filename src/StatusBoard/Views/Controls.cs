@@ -9,6 +9,44 @@ using StatusBoard.Core;
 namespace StatusBoard.Views;
 
 /// <summary>
+/// A horizontal <see cref="WrapPanel"/> that centres each row instead of starting it at the left, so a short last row sits in the
+/// middle. Wrapping is unchanged (the base class measures); only the placement differs. Give items equal left and right margins,
+/// or a trailing margin pulls every row off-centre.
+/// </summary>
+public sealed class CenteredWrapPanel : WrapPanel
+{
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        var row = new List<UIElement>();
+        double rowWidth = 0, rowHeight = 0, y = 0;
+        foreach (UIElement child in InternalChildren)
+        {
+            if (child is null) continue;
+            var size = child.DesiredSize;
+            if (row.Count > 0 && rowWidth + size.Width > finalSize.Width + 1e-6) PlaceRow();
+            row.Add(child);
+            rowWidth += size.Width;
+            rowHeight = Math.Max(rowHeight, size.Height);
+        }
+        PlaceRow();
+        return finalSize;
+
+        void PlaceRow()
+        {
+            var x = Math.Max(0, (finalSize.Width - rowWidth) / 2);
+            foreach (var child in row)
+            {
+                child.Arrange(new Rect(x, y, child.DesiredSize.Width, rowHeight));
+                x += child.DesiredSize.Width;
+            }
+            y += rowHeight;
+            row.Clear();
+            rowWidth = rowHeight = 0;
+        }
+    }
+}
+
+/// <summary>
 /// A status shown as colour + icon + text (never colour alone). Its look comes from styles in Styles.xaml (pill, text, dot, wash…);
 /// this class supplies the glyph and label for <see cref="Status"/>.
 /// </summary>

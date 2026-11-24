@@ -23,7 +23,7 @@
         <!-- Header -->
         <!-- Header: profile on the left, today's date and time centred, controls on the right. Equal outer columns keep the clock truly
              centred; it hides itself on windows too narrow to fit it beside the controls (MainWindow.FitClock). -->
-        <Grid x:Name="HeaderGrid" Margin="24,12,24,4">
+        <Grid x:Name="HeaderGrid" Margin="24,8,24,2">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <!-- Row 1 is used only when the clock can't sit between the profile button and the controls: it then gets row 0 to itself -->
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -37,11 +37,12 @@
                 </StackPanel>
             </Button>
             <StackPanel x:Name="ClockPanel" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="{Binding ClockSpoken}">
-                <TextBlock x:Name="ClockTime" Text="{Binding ClockText}" FontFamily="{DynamicResource DisplayFont}" FontSize="30" FontWeight="SemiBold" HorizontalAlignment="Center"
-                           Typography.NumeralAlignment="Tabular" Margin="0,-4,0,-2"/>
-                <TextBlock x:Name="ClockDate" Text="{Binding DateText}" FontSize="13" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
+                <TextBlock x:Name="ClockTime" Text="{Binding ClockText}" FontFamily="{DynamicResource DisplayFont}" FontSize="45" FontWeight="SemiBold" HorizontalAlignment="Center"
+                           Typography.NumeralAlignment="Tabular" Margin="0,-6,0,-3"/>
+                <TextBlock x:Name="ClockDate" Text="{Binding DateText}" FontSize="18" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
             </StackPanel>
-            <DockPanel x:Name="HeaderControls" Grid.ColumnSpan="3" LastChildFill="False" HorizontalAlignment="Right">
+            <!-- Centred vertically: the clock is taller than the buttons, which would otherwise stretch to its height -->
+            <DockPanel x:Name="HeaderControls" Grid.ColumnSpan="3" LastChildFill="False" HorizontalAlignment="Right" VerticalAlignment="Center">
             <!-- TV mode: a quiet way out instead of the controls -->
             <!-- Fades out after 10 s without mouse movement; any move or key brings it back (MainWindow.ShowTvControls) -->
             <StackPanel x:Name="TvControls" DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsTvMode, Converter={StaticResource BoolToVis}}">
@@ -180,7 +181,7 @@
                         <ItemsControl.Style>
                             <Style TargetType="ItemsControl">
                                 <Setter Property="ItemTemplate" Value="{StaticResource VendorCard}"/>
-                                <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></Setter.Value></Setter>
+                                <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><v:CenteredWrapPanel/></ItemsPanelTemplate></Setter.Value></Setter>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsListView}" Value="True">
                                         <Setter Property="ItemTemplate" Value="{StaticResource VendorRow}"/>
@@ -199,7 +200,8 @@
                                                 <ControlTemplate TargetType="GroupItem">
                                                     <DockPanel>
                                                         <!-- Name (trimmed if very long) then a count badge -->
-                                                        <Grid DockPanel.Dock="Top" Margin="2,4,14,10" HorizontalAlignment="Left">
+                                                        <!-- Centred like the tiles: the right margin offsets the host's -14 tile gap -->
+                                                        <Grid DockPanel.Dock="Top" Margin="0,4,14,10" HorizontalAlignment="Center">
                                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                                             <TextBlock Text="{Binding Name.Title}" FontFamily="{DynamicResource DisplayFont}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
                                                                        TextTrimming="CharacterEllipsis" ToolTip="{Binding Name.Title}"/>

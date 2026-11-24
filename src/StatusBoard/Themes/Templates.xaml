@@ -137,17 +137,19 @@
     <!-- Ticker item: [icon] Vendor [status] Headline — latest update · Updated 14:02. Cached as a bitmap: scrolling moves pictures, not text. -->
     <DataTemplate x:Key="TickerItem" DataType="{x:Type vm:TickerItemViewModel}">
         <Button Command="{Binding DataContext.ShowVendorCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Card}"
-                ToolTip="{Binding Text}" AutomationProperties.Name="{Binding Text}" Cursor="Hand" FocusVisualStyle="{StaticResource FocusRing}">
+                ToolTip="{Binding Text}" AutomationProperties.Name="{Binding Text}" Cursor="Hand" FocusVisualStyle="{StaticResource FocusRing}" Height="64">
             <Button.CacheMode><BitmapCache RenderAtScale="1" SnapsToDevicePixels="False" EnableClearType="False"/></Button.CacheMode>
             <Button.Template>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="10,0"><ContentPresenter VerticalAlignment="Center"/></Border>
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="14,0"><ContentPresenter VerticalAlignment="Center"/></Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHover}"/></Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Button.Template>
-            <StackPanel Orientation="Horizontal" Height="46">
+            <!-- Drawn at 140% inside the Button, so its BitmapCache captures the text already full size and it stays crisp -->
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.LayoutTransform><ScaleTransform ScaleX="1.4" ScaleY="1.4"/></StackPanel.LayoutTransform>
                 <v:StatusIndicator Style="{StaticResource StatusIcon}" Status="{Binding Status}" Margin="0,0,8,0"/>
                 <TextBlock Text="{Binding VendorName}" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Text}" Margin="0,0,8,0"/>
                 <v:StatusIndicator Status="{Binding Status}" VerticalAlignment="Center" Margin="0,0,6,0"/>
