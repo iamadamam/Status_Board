@@ -1,4 +1,4 @@
-Status Board 1.0
+Status Board 1.1
 ================
 
 A small dashboard for Windows that shows the public status of the cloud, SaaS and everyday
