@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:v="clr-namespace:StatusBoard.Views"
              xmlns:vm="clr-namespace:StatusBoard.ViewModels"
-             Margin="0,0,0,22">
+             Margin="0,0,0,16">
     <!-- Centred headline, counters, what needs attention, and the optional news ticker. DataContext: MainViewModel. -->
     <Grid>
         <!-- Layered shadow, not a blur Effect: an Effect re-renders every frame something animates nearby (the ticker) -->
@@ -11,7 +11,7 @@
         <Border CornerRadius="17" Background="{DynamicResource ShadowNear}" Margin="-1,0,-1,-3" IsHitTestVisible="False"/>
         <Border CornerRadius="16" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" AutomationProperties.LiveSetting="Polite">
             <StackPanel x:Name="SummaryGrid">
-                <StackPanel Margin="24,22,24,0" HorizontalAlignment="Center">
+                <StackPanel Margin="24,16,24,0" HorizontalAlignment="Center">
                     <Grid x:Name="SummaryText" HorizontalAlignment="Center" MinWidth="200">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <v:StatusIndicator Style="{StaticResource StatusIcon}" Status="{Binding OverallStatus}" FontSize="26" VerticalAlignment="Center" Margin="0,2,12,0"/>
@@ -27,7 +27,7 @@
                 </StackPanel>
                 <!-- Counters, full width: in TV mode this block (and the ticker) sticks to the top while the rest passes beneath, and is
                      made opaque while stuck (MainWindow.UpdateSticky; transparent otherwise so the card's rounded corners show). -->
-                <Border x:Name="CountersBlock" Panel.ZIndex="2" Padding="24,18,24,18">
+                <Border x:Name="CountersBlock" Panel.ZIndex="2" Padding="24,14,24,14">
                     <WrapPanel HorizontalAlignment="Center">
                         <v:Counter Value="{Binding OperationalCount}" Label="Operational" Foreground="{DynamicResource Status.Operational}" FadeAtZero="False"/>
                         <v:Counter Value="{Binding MajorCount}" Label="Major outage" Foreground="{DynamicResource Status.MajorOutage}"/>
@@ -39,8 +39,8 @@
                     </WrapPanel>
                 </Border>
 
-                <!-- Needs attention: one chip per service; click opens its details -->
-                <Border BorderBrush="{DynamicResource Stroke}" BorderThickness="0,1,0,0" Background="{DynamicResource SurfaceAlt}" Padding="24,14,24,6"
+                <!-- Needs attention: one chip per service, each row centred; click opens its details -->
+                <Border BorderBrush="{DynamicResource Stroke}" BorderThickness="0,1,0,0" Background="{DynamicResource SurfaceAlt}" Padding="24,10,24,4"
                         Visibility="{Binding HasAffected, Converter={StaticResource BoolToVis}}">
                     <Border.Style>
                         <Style TargetType="Border"> <!-- rounded at the bottom only when it's the last strip -->
@@ -51,13 +51,15 @@
                     <StackPanel>
                         <TextBlock Text="Needs attention" Style="{StaticResource SectionHeader}" Margin="0,0,0,10" HorizontalAlignment="Center"/>
                         <ItemsControl x:Name="AffectedHost" ItemsSource="{Binding AffectedShown}" Focusable="False" HorizontalAlignment="Center">
-                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><v:CenteredWrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:CardViewModel}">
                                     <Button Style="{StaticResource ChipButton}" CommandParameter="{Binding}" ToolTip="{Binding ShortHeadline}"
                                             Command="{Binding DataContext.ShowVendorCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                             AutomationProperties.Name="{Binding Name, StringFormat='{}{0} – show details'}"
                                             MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                                        <!-- Drawn at 85%: compact chips, everything inside shrinking together -->
+                                        <Button.LayoutTransform><ScaleTransform ScaleX="0.85" ScaleY="0.85"/></Button.LayoutTransform>
                                         <DockPanel> <!-- a long name trims instead of pushing the status off the edge -->
                                             <ContentPresenter DockPanel.Dock="Left" Content="{Binding}" ContentTemplate="{StaticResource VendorBadgeSmall}" Margin="0,0,8,0"/>
                                             <v:StatusIndicator DockPanel.Dock="Right" Status="{Binding Status}" OverrideText="{Binding StatusOverrideText}" VerticalAlignment="Center"/>
@@ -76,14 +78,14 @@
                 <Border x:Name="TickerStrip" Panel.ZIndex="1" BorderBrush="{DynamicResource Stroke}" BorderThickness="0,1,0,0" CornerRadius="0,0,16,16" Background="{DynamicResource Surface}"
                         Visibility="{Binding ShowTicker, Converter={StaticResource BoolToVis}}" AutomationProperties.Name="Incident news ticker">
                     <DockPanel>
-                        <Border Background="{DynamicResource AccentSoft}" CornerRadius="0,0,0,16" Padding="18,0,16,0">
+                        <Border Background="{DynamicResource AccentSoft}" CornerRadius="0,0,0,16" Padding="22,0,20,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <v:StatusIndicator Style="{StaticResource StatusDot}" Status="{Binding OverallStatus}" Width="16" Height="16" Margin="0,0,6,0"/>
-                                <TextBlock Text="LIVE" FontWeight="Bold" FontSize="11.5" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
+                                <v:StatusIndicator Style="{StaticResource StatusDot}" Status="{Binding OverallStatus}" Width="22" Height="22" Margin="0,0,8,0"/>
+                                <TextBlock Text="LIVE" FontWeight="Bold" FontSize="16" Foreground="{DynamicResource Accent}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <!-- Animated hinting + ideal layout: text moving by fractions of a pixel doesn't shimmer -->
-                        <Canvas x:Name="TickerViewport" Height="46" ClipToBounds="True" Background="Transparent"
+                        <Canvas x:Name="TickerViewport" Height="64" ClipToBounds="True" Background="Transparent"
                                 TextOptions.TextHintingMode="Animated" TextOptions.TextFormattingMode="Ideal">
                             <StackPanel x:Name="TickerTrack" Orientation="Horizontal">
                                 <ItemsControl x:Name="TickerA" ItemsSource="{Binding TickerItems}" ItemTemplate="{StaticResource TickerItem}" Focusable="False">

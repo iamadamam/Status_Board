@@ -290,7 +290,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Stroke}"/>
         <Setter Property="Foreground" Value="{DynamicResource Text}"/>
         <Setter Property="Padding" Value="5,5,7,5"/>
-        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="Margin" Value="3,0,3,6"/> <!-- equal sides, so centred rows stay centred -->
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">

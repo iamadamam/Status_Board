@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- The news ticker is 1.4× larger and the clock is bigger (time 45 pt, date 18 pt), for reading across a room.
+- "Needs attention" chips are smaller, and each row of chips is centred.
+- A partly filled last row of tiles is centred, as are group headings.
+- Slightly less empty space in the header and status bar.
+
 ## [1.0.0] - 2026-11-22
 
 First public release.
