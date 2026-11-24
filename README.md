@@ -1,6 +1,6 @@
 # Status Board
 
-[![Release](https://img.shields.io/badge/release-v1.0.0-2ea44f)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.1.0-2ea44f)](../../releases/latest)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 [![Licence: PolyForm Strict 1.0.0](https://img.shields.io/badge/licence-PolyForm%20Strict%201.0.0-blue)](LICENSE)
@@ -53,7 +53,7 @@ no vendor accounts, no sign-in, no telemetry and no data about you sent anywhere
 
 ## Running it
 
-Download `StatusBoard-v1.0-win-x64.zip` from the release, unzip it anywhere (a USB stick is fine) and run
+Download `StatusBoard-v1.1-win-x64.zip` from the release, unzip it anywhere (a USB stick is fine) and run
 `StatusBoard.exe`. It's self-contained: no installer and no .NET download. Requires 64-bit Windows 10 or 11.
 
 Everything is stored next to the exe: `profiles.json` and one settings file per profile (`statusboard.json`,
@@ -64,7 +64,7 @@ Everything is stored next to the exe: `profiles.json` and one settings file per 
 
 - **Read-only, outbound GET requests** to the status pages you've chosen (and to vendor websites once, for logos), plus
   any website, ping or LibreNMS checks you add yourself. No
-  listening ports, no inbound connections, no auto-update, no analytics. The User-Agent is simply `StatusBoard/1.0`.
+  listening ports, no inbound connections, no auto-update, no analytics. The User-Agent is simply `StatusBoard/1.1`.
 - **Gentle on the network:** refreshes every 5 minutes by default (1–60 or manual), at most 12 sources at once and 4
   connections per host; idle connections close after a minute. Requests time out after 15 s with up to 3 attempts.
   Your own website/ping checks run every minute, only if you add some. Uses the Windows proxy settings.
@@ -82,7 +82,7 @@ Everything is stored next to the exe: `profiles.json` and one settings file per 
 Windows 10/11 and the .NET 10 SDK (`winget install Microsoft.DotNet.SDK.10`).
 
 ```powershell
-.\build.ps1                          # tests, then artifacts\StatusBoard\ + artifacts\StatusBoard-v1.0-win-x64.zip (+ .sha256)
+.\build.ps1                          # tests, then artifacts\StatusBoard\ + artifacts\StatusBoard-v1.1-win-x64.zip (+ .sha256)
 .\build.ps1 -FrameworkDependent      # ~1 MB exe; needs the .NET 10 Desktop Runtime on the PC
 .\build.ps1 -SingleExe               # one file; .NET extracts 5 native DLLs to %TEMP%\.net on first run
 .\build.ps1 -Compact                 # compressed exe: half the disk space, ~70 MB more RAM while running
