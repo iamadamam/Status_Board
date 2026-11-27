@@ -83,7 +83,7 @@ Windows 10/11 and the .NET 10 SDK (`winget install Microsoft.DotNet.SDK.10`).
 
 ```powershell
 .\build.ps1                          # tests, then artifacts\StatusBoard\ + artifacts\StatusBoard-v1.1-win-x64.zip (+ .sha256)
-.\build.ps1 -FrameworkDependent      # ~1 MB exe; needs the .NET 10 Desktop Runtime on the PC
+.\build.ps1 -FrameworkDependent      # ~2 MB exe; needs the .NET 10 Desktop Runtime on the PC
 .\build.ps1 -SingleExe               # one file; .NET extracts 5 native DLLs to %TEMP%\.net on first run
 .\build.ps1 -Compact                 # compressed exe: half the disk space, ~70 MB more RAM while running
 dotnet test tests/StatusBoard.Tests  # unit tests only (saved responses, no network)

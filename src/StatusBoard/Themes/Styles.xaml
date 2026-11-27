@@ -164,6 +164,22 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!-- Glow ring for a tile whose status just changed: a crisp inner edge and a soft outer halo in the new status colour.
+         Two translucent borders instead of a blur Effect, for the same reason as the tile shadow. Opacity is animated by the tile. -->
+    <Style x:Key="StatusGlow" TargetType="v:StatusIndicator" BasedOn="{StaticResource StatusColors}">
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="v:StatusIndicator">
+                    <Grid>
+                        <Border BorderBrush="{TemplateBinding Foreground}" BorderThickness="6" CornerRadius="19" Margin="-5" Opacity="0.22"/>
+                        <Border BorderBrush="{TemplateBinding Foreground}" BorderThickness="3" CornerRadius="16" Margin="-2" Opacity="0.45"/>
+                        <Border BorderBrush="{TemplateBinding Foreground}" BorderThickness="2" CornerRadius="14"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
     <Style x:Key="StatusOutline" TargetType="v:StatusIndicator" BasedOn="{StaticResource StatusColors}">
         <Setter Property="IsHitTestVisible" Value="False"/>
         <Setter Property="Template">

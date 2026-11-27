@@ -11,8 +11,15 @@ public sealed class StatusService(ProviderRegistry registry, IHttpFetcher http)
     /// <summary>Cap for one source including retries, so one slow vendor can't stall a refresh.</summary>
     public TimeSpan SourceDeadline { get; init; } = TimeSpan.FromSeconds(60);
 
-    public async Task<IReadOnlyList<VendorStatus>> RefreshAsync(AppConfig config, CancellationToken ct) =>
-        await Task.WhenAll(config.Vendors.Where(v => v.Enabled).Select(v => RefreshVendorAsync(v, ct))).ConfigureAwait(false);
+    /// <param name="onVendor">Called with each vendor's result the moment that vendor finishes (on a background thread), so the
+    /// board can show it without waiting for the slowest vendor. The returned list still holds every result.</param>
+    public async Task<IReadOnlyList<VendorStatus>> RefreshAsync(AppConfig config, CancellationToken ct, Action<VendorStatus>? onVendor = null) =>
+        await Task.WhenAll(config.Vendors.Where(v => v.Enabled).Select(async v =>
+        {
+            var result = await RefreshVendorAsync(v, ct).ConfigureAwait(false);
+            onVendor?.Invoke(result);
+            return result;
+        })).ConfigureAwait(false);
 
     /// <param name="applyFilters">False when listing every component for the picker.</param>
     /// <param name="sourcesFilter">Which sources to read (default: the enabled ones).</param>

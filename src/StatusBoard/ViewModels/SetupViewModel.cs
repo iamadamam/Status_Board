@@ -164,7 +164,7 @@ public sealed class SetupVendorViewModel : ObservableObject
 /// <summary>A theme the user can pick (Settings and setup).</summary>
 public sealed class ThemeChoice(string name, bool selected) : ObservableObject
 {
-    public static readonly string[] All = ["System", "Light", "Dark", "AMOLED", "Hacker"];
+    public static readonly string[] All = ["System", .. AppConfig.ThemeNames];
     private bool _selected = selected;
     public string Name => name;
     public string Description => name switch
@@ -174,6 +174,7 @@ public sealed class ThemeChoice(string name, bool selected) : ObservableObject
         "Dark" => "Easy on the eyes",
         "AMOLED" => "Pure black for OLED TVs and screens",
         "Hacker" => "Green on black, terminal style",
+        "Obsidianite" => "Violet-black with a cyan glow",
         _ => "",
     };
     public bool IsSelected { get => _selected; set => Set(ref _selected, value); }
@@ -184,13 +185,14 @@ public sealed class ThemeChoice(string name, bool selected) : ObservableObject
         "Dark" => ("#0A0F0E", "#121917", "#3DDBBE", "#E6EEEB"),
         "AMOLED" => ("#000000", "#000000", "#2EE6C3", "#F5F5F5"),
         "Hacker" => ("#000000", "#010801", "#39FF14", "#4DFF6A"),
+        "Obsidianite" => ("#0D0B12", "#191621", "#0FB6D6", "#CBD1DC"),
         _ => ("#F2F4F3", "#FFFFFF", "#0B8577", "#0F1715"),
     };
     public Brush SwatchBg => Brush(Colors.Bg);
     public Brush SwatchPanel => Brush(Colors.Panel);
     public Brush SwatchAccent => Brush(Colors.Accent);
     public Brush SwatchText => Brush(Colors.Text);
-    public Brush SwatchStroke => Brush(name == "Hacker" ? "#17611E" : name is "AMOLED" ? "#333333" : name == "Dark" ? "#2E3B37" : "#CBD3D0");
+    public Brush SwatchStroke => Brush(name switch { "Hacker" => "#17611E", "AMOLED" => "#333333", "Dark" => "#2E3B37", "Obsidianite" => "#383347", _ => "#CBD3D0" });
     public FontFamily SwatchFont => new(name == "Hacker" ? "Cascadia Mono, Consolas" : "Segoe UI Variable Display, Segoe UI");
     private static SolidColorBrush Brush(string hex) { var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); b.Freeze(); return b; }
 

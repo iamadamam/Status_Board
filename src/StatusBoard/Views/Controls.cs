@@ -140,3 +140,61 @@ public class Counter : Control
     public bool FadeAtZero { get => (bool)GetValue(FadeAtZeroProperty); set => SetValue(FadeAtZeroProperty, value); }
 }
 
+
+/// <summary>
+/// The 24-hour strip along the bottom of a tile: one rounded block per half hour, coloured by the worst status seen in it, faint
+/// where nothing was recorded. Drawn directly (one element per tile, not 48), and redrawn only when the blocks or theme change.
+/// </summary>
+public sealed class HistoryStrip : FrameworkElement
+{
+    public static readonly DependencyProperty BucketsProperty = Prop(nameof(Buckets), typeof(IReadOnlyList<ServiceStatus?>));
+    public static readonly DependencyProperty EmptyBrushProperty = Prop(nameof(EmptyBrush));
+    public static readonly DependencyProperty OperationalBrushProperty = Prop(nameof(OperationalBrush));
+    public static readonly DependencyProperty MaintenanceBrushProperty = Prop(nameof(MaintenanceBrush));
+    public static readonly DependencyProperty DegradedBrushProperty = Prop(nameof(DegradedBrush));
+    public static readonly DependencyProperty PartialBrushProperty = Prop(nameof(PartialBrush));
+    public static readonly DependencyProperty MajorBrushProperty = Prop(nameof(MajorBrush));
+    public static readonly DependencyProperty UnknownBrushProperty = Prop(nameof(UnknownBrush));
+
+    private static DependencyProperty Prop(string name, Type? type = null) => DependencyProperty.Register(name, type ?? typeof(Brush), typeof(HistoryStrip),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public IReadOnlyList<ServiceStatus?>? Buckets { get => (IReadOnlyList<ServiceStatus?>?)GetValue(BucketsProperty); set => SetValue(BucketsProperty, value); }
+    public Brush? EmptyBrush { get => (Brush?)GetValue(EmptyBrushProperty); set => SetValue(EmptyBrushProperty, value); }
+    public Brush? OperationalBrush { get => (Brush?)GetValue(OperationalBrushProperty); set => SetValue(OperationalBrushProperty, value); }
+    public Brush? MaintenanceBrush { get => (Brush?)GetValue(MaintenanceBrushProperty); set => SetValue(MaintenanceBrushProperty, value); }
+    public Brush? DegradedBrush { get => (Brush?)GetValue(DegradedBrushProperty); set => SetValue(DegradedBrushProperty, value); }
+    public Brush? PartialBrush { get => (Brush?)GetValue(PartialBrushProperty); set => SetValue(PartialBrushProperty, value); }
+    public Brush? MajorBrush { get => (Brush?)GetValue(MajorBrushProperty); set => SetValue(MajorBrushProperty, value); }
+    public Brush? UnknownBrush { get => (Brush?)GetValue(UnknownBrushProperty); set => SetValue(UnknownBrushProperty, value); }
+
+    /// <summary>Space between blocks, in layout units.</summary>
+    public const double Gap = 2;
+
+    protected override Size MeasureOverride(Size available) => new(0, 6);
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        var buckets = Buckets;
+        var n = buckets?.Count is > 0 ? buckets.Count : StatusHistory.Buckets;
+        var w = (ActualWidth - Gap * (n - 1)) / n;
+        if (w <= 0 || ActualHeight <= 0) return;
+        var radius = Math.Min(1.5, w / 2);
+        for (var i = 0; i < n; i++)
+        {
+            var status = buckets is null ? null : buckets[i];
+            var brush = status switch
+            {
+                null => EmptyBrush,
+                ServiceStatus.Operational => OperationalBrush,
+                ServiceStatus.Maintenance => MaintenanceBrush,
+                ServiceStatus.Degraded => DegradedBrush,
+                ServiceStatus.PartialOutage => PartialBrush,
+                ServiceStatus.MajorOutage => MajorBrush,
+                _ => UnknownBrush,
+            };
+            if (brush is null) continue;
+            dc.DrawRoundedRectangle(brush, null, new Rect(i * (w + Gap), 0, w, ActualHeight), radius, radius);
+        }
+    }
+}

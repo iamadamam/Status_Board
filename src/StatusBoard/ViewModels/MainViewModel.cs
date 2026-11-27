@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -40,12 +41,29 @@ public sealed class MainViewModel : ObservableObject
     private CardViewModel? _selected;
     private string? _banner;
     private double _cardWidth = 320;
+    /// <summary>The last 24 hours per vendor, for the strip on each tile (history.json next to the app).</summary>
+    private readonly StatusHistory _history;
+    private readonly string _historyPath = System.IO.Path.Combine(AppContext.BaseDirectory, StatusHistory.FileName);
+    /// <summary>Vendor results that arrived during a refresh, waiting to be shown (filled from background threads).</summary>
+    private readonly ConcurrentQueue<(int Generation, VendorStatus Result)> _arrived = new();
+    /// <summary>Bumped by each refresh and profile switch: a result from an older refresh is dropped, never shown on a newer board.</summary>
+    private int _refreshGeneration;
+    /// <summary>False for self-test and snapshot runs, so scripted results never reach the real history.json.</summary>
+    private readonly bool _keepHistory;
+    /// <summary>How often arriving results are shown during a refresh: at most about four board updates a second.</summary>
+    public static readonly TimeSpan ApplyBatchInterval = TimeSpan.FromMilliseconds(250);
+    private readonly DispatcherTimer _batchTimer = new() { Interval = ApplyBatchInterval };
+    /// <summary>Status changes seen during one refresh, announced once at its end however many batches it took.</summary>
+    private readonly ChangeCollector<StatusChange> _changes = new();
     /// <summary>Card positions before status sorting (category, then statusboard.json order).</summary>
     private Dictionary<string, int> _baseOrder = [];
 
-    public MainViewModel(ConfigStore store, AppConfig config, StatusService service, IHttpFetcher http, ProfileStore? profiles = null)
+    public MainViewModel(ConfigStore store, AppConfig config, StatusService service, IHttpFetcher http, ProfileStore? profiles = null, bool keepHistory = true)
     {
         (_store, _config, _service, _http, _logos, _banner, _profiles) = (store, config, service, http, new LogoService(http), store.LoadWarning, profiles);
+        _keepHistory = keepHistory;
+        _history = keepHistory ? StatusHistory.Load(_historyPath, DateTimeOffset.Now) : new StatusHistory();
+        _batchTimer.Tick += (_, _) => ApplyArrived();
 
         RefreshCommand = new RelayCommand(() => _ = RefreshAsync(), () => !IsRefreshing);
         OpenSettingsCommand = new RelayCommand(OpenSettings);
@@ -216,6 +234,9 @@ public sealed class MainViewModel : ObservableObject
         (OverallStatus, SummaryHeadline, SummaryDetail) =
             Cards.Count == 0 ? (ServiceStatus.Unknown, "No vendors enabled", "Open Settings to choose which vendors to watch.")
             : checkedCards.Count == 0 ? (ServiceStatus.Unknown, "Checking vendor status…", "")
+            // First load still arriving and nothing wrong yet: don't call it "all operational" (or "offline") on a handful of answers.
+            : IsRefreshing && checkedCards.Count < Cards.Count && problems.Count == 0
+                ? (ServiceStatus.Unknown, "Checking vendor status…", $"{checkedCards.Count} of {Cards.Count} checked")
             : problems.Count > 0 ? (problems[0].Status, problems.Count == 1 ? $"{problems[0].Name} is reporting issues" : $"{problems.Count} services reporting issues", "")
             : unreachable.Count == checkedCards.Count ? (ServiceStatus.Unknown, "Couldn't reach any status source",
                 "Check your internet connection." + (_config.RefreshIntervalMinutes > 0 ? " Will retry automatically." : ""))
@@ -283,12 +304,27 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             foreach (var c in Cards) c.MarkChecking();
-            ApplyResults(await _service.RefreshAsync(_config, _refreshCts.Token));
+            // Each vendor is shown as soon as it answers (in small batches), instead of all at once after the slowest.
+            _batchTimer.Start();
+            var generation = ++_refreshGeneration;
+            await _service.RefreshAsync(_config, _refreshCts.Token, r => _arrived.Enqueue((generation, r)));
+            _batchTimer.Stop();
+            ApplyArrived();
+            _lastRefresh = DateTimeOffset.Now;
+            OnPropertyChanged(nameof(LastRefreshText));
+            AnnounceChanges();
+            SaveHistory();
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            _arrived.Clear(); // a cancelled refresh (profile switch) shows nothing more and announces nothing
+            _changes.Drain();
+        }
         finally
         {
+            _batchTimer.Stop();
             IsRefreshing = false;
+            UpdateSummary(); // the final verdict, now that the refresh is over
             _refreshCts?.Dispose();
             _refreshCts = null;
             RestartTimer();
@@ -301,26 +337,63 @@ public sealed class MainViewModel : ObservableObject
     /// <param name="countsAsRefresh">False for the minute-by-minute website/ping checks, which mustn't move "Updated …" for every vendor.</param>
     public void ApplyResults(IReadOnlyList<VendorStatus> results, bool countsAsRefresh)
     {
-        var changes = new List<StatusChange>();
+        ApplyBatch(results);
+        if (countsAsRefresh) _lastRefresh = DateTimeOffset.Now;
+        if (!IsRefreshing) AnnounceChanges(); // during a refresh, its own end announces everything once
+    }
+
+    /// <summary>Shows whatever has arrived since the last batch.</summary>
+    private void ApplyArrived()
+    {
+        var batch = new List<VendorStatus>();
+        while (_arrived.TryDequeue(out var item)) if (item.Generation == _refreshGeneration) batch.Add(item.Result);
+        if (batch.Count > 0) ApplyBatch(batch);
+    }
+
+    /// <summary>Updates the cards for some vendors, then the order, summary, counters and ticker. Changes are collected, not announced.</summary>
+    private void ApplyBatch(IReadOnlyList<VendorStatus> results)
+    {
+        var now = DateTimeOffset.Now;
         foreach (var r in results)
         {
             if (Cards.FirstOrDefault(c => c.Id == r.VendorId) is not { } card) continue; // settings changed mid-refresh
+            if (StatusChanges.IsStale(card.Data?.CheckedAt, r.CheckedAt)) continue; // a slow check overtaken by a newer refresh
             var old = card.Data?.Status;
             var oldStage = card.Data?.Stage ?? IncidentStage.None;
             card.Update(r);
-            var stage = r.Stage;
-            // Only transitions between known states: an unreachable feed is not a vendor incident.
-            if (old is { } o && o != ServiceStatus.Unknown && r.Status != ServiceStatus.Unknown
-                && (o != r.Status
-                    // Same status, but the incident moved on (Investigating → Monitoring): worth knowing.
-                    || (r.Status != ServiceStatus.Operational && oldStage != IncidentStage.None && stage != IncidentStage.None && oldStage != stage)))
-                changes.Add(new StatusChange(r.VendorName, o, r.Status, oldStage, stage));
+            // Only transitions between known states: an unreachable feed is not a vendor incident. A notification also covers
+            // an incident moving on at the same status (Investigating → Monitoring); the tile glows only when the status changed.
+            if (StatusChanges.ShouldNotify(old, oldStage, r.Status, r.Stage)) _changes.Add(new StatusChange(r.VendorName, old!.Value, r.Status, oldStage, r.Stage));
+            if (StatusChanges.ShouldGlow(old, r.Status)) card.Glow();
+            _history.Record(r.VendorId, r.Status, r.CheckedAt, StatusHistory.GapFor(_config.RefreshIntervalMinutes));
+            card.SetHistory(_history.BucketsFor(r.VendorId, now));
         }
-        if (countsAsRefresh) _lastRefresh = DateTimeOffset.Now;
         SortProblemsFirst();
         UpdateSummary();
         UpdateTicker();
+    }
+
+    private void AnnounceChanges()
+    {
+        var changes = _changes.Drain();
         if (changes.Count > 0) StatusesChanged?.Invoke(this, changes);
+    }
+
+    private void SaveHistory()
+    {
+        _history.Prune(DateTimeOffset.Now);
+        if (_keepHistory) _history.TrySave(_historyPath);
+    }
+
+    /// <summary>Every tile's strip moves along as the half hours pass, and durations keep counting.</summary>
+    private void RefreshTimeBasedText()
+    {
+        var now = DateTimeOffset.Now;
+        foreach (var c in Cards)
+        {
+            c.TickMinute();
+            c.SetHistory(_history.BucketsFor(c.Id, now));
+        }
     }
 
     private void RestartTimer()
@@ -338,6 +411,8 @@ public sealed class MainViewModel : ObservableObject
 
     public void Shutdown()
     {
+        SaveHistory();
+        _batchTimer.Stop();
         _timer.Stop();
         _clock.Stop();
         _minuteTimer.Stop();
@@ -398,9 +473,40 @@ public sealed class MainViewModel : ObservableObject
         var minute = now.Hour * 60 + now.Minute;
         var toNext = TimeSpan.FromSeconds(60 - now.Second) - TimeSpan.FromMilliseconds(now.Millisecond) + TimeSpan.FromMilliseconds(30);
         _minuteTimer.Interval = toNext < TimeSpan.FromSeconds(15) ? toNext : TimeSpan.FromSeconds(15);
+        UpdateYearProgress(now);
         if (minute == _shownMinute) return;
         _shownMinute = minute;
         Notify(nameof(ClockText), nameof(DateText), nameof(ClockSpoken));
+        RefreshTimeBasedText();
+    }
+
+    // ---- Year progress: every few minutes the clock steps aside for 15 s to show how far through the year we are ----
+    private bool _showYear;
+    /// <summary>True while the header shows the year-progress bar instead of the clock (Settings: on/off and how often).</summary>
+    public bool ShowYearProgress { get => _showYear; private set => Set(ref _showYear, value); }
+    public double YearFraction => YearProgress.Fraction(DateTime.Now);
+    /// <summary>"90.6%".</summary>
+    public string YearPercentText => (YearFraction * 100).ToString("0.0", CultureInfo.CurrentCulture) + "%";
+    /// <summary>"of 2026 · 34 days left".</summary>
+    public string YearDetailText
+    {
+        get
+        {
+            var now = DateTime.Now;
+            var left = (int)Math.Ceiling((new DateTime(now.Year + 1, 1, 1) - now).TotalDays) - 1;
+            return $"of {now.Year} · " + (left <= 0 ? "last day" : left == 1 ? "1 day left" : $"{left} days left");
+        }
+    }
+    public string YearSpoken => $"{YearPercentText} {YearDetailText}";
+    /// <summary>The bar's filled and empty parts, as star widths.</summary>
+    public System.Windows.GridLength YearDoneLength => new(YearFraction, System.Windows.GridUnitType.Star);
+    public System.Windows.GridLength YearLeftLength => new(1 - YearFraction, System.Windows.GridUnitType.Star);
+
+    private void UpdateYearProgress(DateTime now)
+    {
+        var show = _config.YearProgressCycle && YearProgress.IsShowing(now, _config.YearProgressIntervalMinutes);
+        if (show && !_showYear) Notify(nameof(YearFraction), nameof(YearPercentText), nameof(YearDetailText), nameof(YearSpoken), nameof(YearDoneLength), nameof(YearLeftLength));
+        ShowYearProgress = show;
     }
     /// <summary>Extra size in TV mode, on top of the user's tile size.</summary>
     public const double TvBoost = 1.25;
@@ -480,6 +586,8 @@ public sealed class MainViewModel : ObservableObject
             Cards.Add(card);
         }
         RebuildView();
+        var now = DateTimeOffset.Now;
+        foreach (var c in Cards) c.SetHistory(_history.BucketsFor(c.Id, now)); // strips filled straight away, not on the next result
         Selected = Cards.FirstOrDefault(c => c.Id == selectedId);
         _baseOrder = Cards.Select((c, i) => (c.Id, i)).ToDictionary(x => x.Id, x => x.i);
         SortProblemsFirst();
@@ -596,6 +704,8 @@ public sealed class MainViewModel : ObservableObject
         (Settings, Vendors, Selected) = (null, null, null);
         _refreshCts?.Cancel();
         (_store, _config, Banner) = (store, config, store.LoadWarning);
+        _refreshGeneration++; // anything the old profile's refresh still delivers is dropped
+        _arrived.Clear();
         foreach (var c in Cards) c.Logo = null;
         Cards.Clear(); // a fresh board: no state carried over from the other profile
         RebuildCards();

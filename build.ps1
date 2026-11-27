@@ -5,13 +5,13 @@
 .DESCRIPTION
   Default: a portable, self-contained folder (StatusBoard.exe + 5 small WPF native DLLs); no .NET install needed, nothing
   written outside the folder at runtime. The zip is made from a clean publish, so it never contains settings or cached logos;
-  your profiles (statusboard.json, profiles.json, profile-*.json) and logos\ in an existing artifacts\StatusBoard are kept.
+  your profiles (statusboard.json, profiles.json, profile-*.json), history.json and logos\ in an existing artifacts\StatusBoard are kept.
 
-  -FrameworkDependent: a ~1 MB build that needs the .NET 10 Desktop Runtime installed on the PC.
+  -FrameworkDependent: a ~2 MB build that needs the .NET 10 Desktop Runtime installed on the PC.
   -SingleExe: one file; .NET extracts the WPF native DLLs to %TEMP%\.net on first run (so not zero-footprint).
   The exe is uncompressed by default: it is mapped from the file and shared with Windows' file cache, so it uses far less RAM
   than a compressed one (which is unpacked into private memory at startup). The zip download is about the same size either way.
-  -Compact: a compressed exe (~55 MB instead of ~118 MB on disk) that uses ~70 MB more RAM while running.
+  -Compact: a compressed exe (roughly half the ~135 MB on disk) that uses ~70 MB more RAM while running.
 
 .EXAMPLE
   .\build.ps1
@@ -39,7 +39,8 @@ $staging = Join-Path $artifacts ".staging"   # publish here first, so a running 
 Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "==> Publish Status Board $version ($Runtime, $(if ($FrameworkDependent) { 'framework-dependent' } else { 'self-contained' }))" -ForegroundColor Cyan
-$props = @("-p:PublishSingleFile=true", "-p:DebugType=none", "-p:GenerateDocumentationFile=false")
+# ReadyToRun: compiled ahead of time, so the app starts without waiting for most code to be compiled on first use.
+$props = @("-p:PublishSingleFile=true", "-p:PublishReadyToRun=true", "-p:DebugType=none", "-p:GenerateDocumentationFile=false")
 if ($FrameworkDependent) { $props += "--self-contained", "false" }
 else { $props += "--self-contained", "true", "-p:EnableCompressionInSingleFile=$($Compact.IsPresent.ToString().ToLower())", "-p:IncludeNativeLibrariesForSelfExtract=$($SingleExe.IsPresent.ToString().ToLower())" }
 & dotnet publish src/StatusBoard -c Release -r $Runtime @props -o $staging --nologo
@@ -58,8 +59,8 @@ if ($inUse) {
     Write-Warning "artifacts\StatusBoard is in use (Status Board is running from it), so it was left untouched. Close the app and re-run to refresh it."
     $out = $staging
 } else {
-    # Keep local settings: every profile (statusboard.json, profiles.json, profile-*.json), cached and uploaded logos.
-    $keepList = @("statusboard.json", "profiles.json", "logos") + @(Get-ChildItem $out -Filter "profile-*.json" -ErrorAction SilentlyContinue | ForEach-Object Name)
+    # Keep local settings: every profile (statusboard.json, profiles.json, profile-*.json), the 24-hour history, cached and uploaded logos.
+    $keepList = @("statusboard.json", "profiles.json", "history.json", "logos") + @(Get-ChildItem $out -Filter "profile-*.json" -ErrorAction SilentlyContinue | ForEach-Object Name)
     foreach ($keep in $keepList) { if (Test-Path (Join-Path $out $keep)) { Copy-Item (Join-Path $out $keep) $staging -Recurse -Force } }
     Remove-Item $out -Recurse -Force -ErrorAction SilentlyContinue
     Move-Item $staging $out

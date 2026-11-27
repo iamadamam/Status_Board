@@ -7,7 +7,7 @@ using Microsoft.Win32;
 namespace StatusBoard.Services;
 
 /// <summary>
-/// System (follows Windows), Light, Dark, AMOLED (true black) or Hacker (green terminal): swaps the colour/font dictionary and WPF's
+/// System (follows Windows), Light, Dark, AMOLED (true black), Hacker (green terminal) or Obsidianite (violet-black, cyan): swaps the colour/font dictionary and WPF's
 /// Fluent theme mode, and tints the title bar to match. Only reads the registry ("apps use light theme"); never writes it.
 /// </summary>
 public sealed class ThemeManager : IDisposable
@@ -15,7 +15,7 @@ public sealed class ThemeManager : IDisposable
     private readonly Application _app;
     private readonly Dictionary<string, ResourceDictionary> _themes = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Light"] = Load("Light"), ["Dark"] = Load("Dark"), ["AMOLED"] = Load("Amoled"), ["Hacker"] = Load("Hacker"),
+        ["Light"] = Load("Light"), ["Dark"] = Load("Dark"), ["AMOLED"] = Load("Amoled"), ["Hacker"] = Load("Hacker"), ["Obsidianite"] = Load("Obsidianite"),
     };
     private string _mode = "System";
 
@@ -28,7 +28,7 @@ public sealed class ThemeManager : IDisposable
     private static ResourceDictionary Load(string file) => new() { Source = new Uri($"Themes/{file}.xaml", UriKind.Relative) };
 
     public bool IsDark { get; private set; }
-    /// <summary>The theme actually showing ("Light", "Dark", "AMOLED" or "Hacker"; System resolves to Light or Dark).</summary>
+    /// <summary>The theme actually showing ("Light", "Dark", "AMOLED", "Hacker" or "Obsidianite"; System resolves to Light or Dark).</summary>
     public string Current { get; private set; } = "Light";
 
     public void Apply(string mode)

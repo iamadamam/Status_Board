@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using StatusBoard.Core;
 
 namespace StatusBoard.ViewModels;
@@ -70,6 +71,46 @@ public sealed class CardViewModel(string id, string name, string? statusPageUrl,
     }
 
     public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
+
+    // ---- How long the current problem has lasted ("for 2h 14m"), beside the status on the tile ----
+    public string? DurationText => IncidentDuration.Text(_data, DateTimeOffset.Now);
+    /// <summary>Called every minute so the duration keeps counting between refreshes.</summary>
+    public void TickMinute() => OnPropertyChanged(nameof(DurationText));
+
+    // ---- The last 24 hours: one entry per half hour, oldest first (null = no data) ----
+    private IReadOnlyList<ServiceStatus?> _history = new ServiceStatus?[StatusHistory.Buckets];
+    public IReadOnlyList<ServiceStatus?> History => _history;
+    public string HistoryTooltip => "Last 24 hours, in half-hour blocks (coloured by the worst status seen)";
+
+    public void SetHistory(IReadOnlyList<ServiceStatus?> buckets)
+    {
+        if (buckets.SequenceEqual(_history)) return; // redraw only when a block changed
+        _history = buckets;
+        OnPropertyChanged(nameof(History));
+    }
+
+    // ---- A short glow when the status changes, so it's noticed on a wall screen ----
+    public static readonly TimeSpan GlowLength = TimeSpan.FromSeconds(2.6);
+    private bool _isGlowing;
+    private DispatcherTimer? _glowTimer;
+    public bool IsGlowing { get => _isGlowing; private set => Set(ref _isGlowing, value); }
+
+    /// <summary>Starts (or restarts) the glow; it switches itself off after <see cref="GlowLength"/>.</summary>
+    public void Glow()
+    {
+        IsGlowing = false; // a change during a glow starts it again
+        IsGlowing = true;
+        _glowTimer ??= CreateGlowTimer();
+        _glowTimer.Stop();
+        _glowTimer.Start();
+    }
+
+    private DispatcherTimer CreateGlowTimer()
+    {
+        var t = new DispatcherTimer { Interval = GlowLength };
+        t.Tick += (_, _) => { t.Stop(); IsGlowing = false; };
+        return t;
+    }
     public bool IsChecking { get => _isChecking; private set { if (Set(ref _isChecking, value)) OnPropertyChanged(nameof(StatusOverrideText)); } }
     public ServiceStatus Status => _data?.Status ?? ServiceStatus.Unknown;
     public bool IsProblem => Status.IsProblem();

@@ -44,7 +44,8 @@ public partial class App : Application
         _theme = new ThemeManager(this);
         _theme.Apply(config.Theme);
         _http = new HttpFetcher();
-        _vm = new MainViewModel(store, config, new StatusService(ProviderRegistry.CreateDefault(), _http), _http, profiles);
+        _vm = new MainViewModel(store, config, new StatusService(ProviderRegistry.CreateDefault(), _http), _http, profiles,
+            keepHistory: selfTestDir is null && snapshot is null); // scripted test results must never reach the real 24-hour history
         MainWindow = _window = new MainWindow(_vm, _theme);
 
         _vm.ConfigApplied += (_, _) => { _theme.Apply(_vm.Config.Theme); SyncTray(); };
