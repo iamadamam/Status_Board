@@ -45,7 +45,11 @@ public sealed class MainViewModel : ObservableObject
     private readonly StatusHistory _history;
     private readonly string _historyPath = System.IO.Path.Combine(AppContext.BaseDirectory, StatusHistory.FileName);
     /// <summary>Vendor results that arrived during a refresh, waiting to be shown (filled from background threads).</summary>
-    private readonly ConcurrentQueue<VendorStatus> _arrived = new();
+    private readonly ConcurrentQueue<(int Generation, VendorStatus Result)> _arrived = new();
+    /// <summary>Bumped by each refresh and profile switch: a result from an older refresh is dropped, never shown on a newer board.</summary>
+    private int _refreshGeneration;
+    /// <summary>False for self-test and snapshot runs, so scripted results never reach the real history.json.</summary>
+    private readonly bool _keepHistory;
     /// <summary>How often arriving results are shown during a refresh: at most about four board updates a second.</summary>
     public static readonly TimeSpan ApplyBatchInterval = TimeSpan.FromMilliseconds(250);
     private readonly DispatcherTimer _batchTimer = new() { Interval = ApplyBatchInterval };
@@ -54,10 +58,11 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Card positions before status sorting (category, then statusboard.json order).</summary>
     private Dictionary<string, int> _baseOrder = [];
 
-    public MainViewModel(ConfigStore store, AppConfig config, StatusService service, IHttpFetcher http, ProfileStore? profiles = null)
+    public MainViewModel(ConfigStore store, AppConfig config, StatusService service, IHttpFetcher http, ProfileStore? profiles = null, bool keepHistory = true)
     {
         (_store, _config, _service, _http, _logos, _banner, _profiles) = (store, config, service, http, new LogoService(http), store.LoadWarning, profiles);
-        _history = StatusHistory.Load(_historyPath, DateTimeOffset.Now);
+        _keepHistory = keepHistory;
+        _history = keepHistory ? StatusHistory.Load(_historyPath, DateTimeOffset.Now) : new StatusHistory();
         _batchTimer.Tick += (_, _) => ApplyArrived();
 
         RefreshCommand = new RelayCommand(() => _ = RefreshAsync(), () => !IsRefreshing);
@@ -229,6 +234,9 @@ public sealed class MainViewModel : ObservableObject
         (OverallStatus, SummaryHeadline, SummaryDetail) =
             Cards.Count == 0 ? (ServiceStatus.Unknown, "No vendors enabled", "Open Settings to choose which vendors to watch.")
             : checkedCards.Count == 0 ? (ServiceStatus.Unknown, "Checking vendor status…", "")
+            // First load still arriving and nothing wrong yet: don't call it "all operational" (or "offline") on a handful of answers.
+            : IsRefreshing && checkedCards.Count < Cards.Count && problems.Count == 0
+                ? (ServiceStatus.Unknown, "Checking vendor status…", $"{checkedCards.Count} of {Cards.Count} checked")
             : problems.Count > 0 ? (problems[0].Status, problems.Count == 1 ? $"{problems[0].Name} is reporting issues" : $"{problems.Count} services reporting issues", "")
             : unreachable.Count == checkedCards.Count ? (ServiceStatus.Unknown, "Couldn't reach any status source",
                 "Check your internet connection." + (_config.RefreshIntervalMinutes > 0 ? " Will retry automatically." : ""))
@@ -298,7 +306,8 @@ public sealed class MainViewModel : ObservableObject
             foreach (var c in Cards) c.MarkChecking();
             // Each vendor is shown as soon as it answers (in small batches), instead of all at once after the slowest.
             _batchTimer.Start();
-            await _service.RefreshAsync(_config, _refreshCts.Token, _arrived.Enqueue);
+            var generation = ++_refreshGeneration;
+            await _service.RefreshAsync(_config, _refreshCts.Token, r => _arrived.Enqueue((generation, r)));
             _batchTimer.Stop();
             ApplyArrived();
             _lastRefresh = DateTimeOffset.Now;
@@ -315,6 +324,7 @@ public sealed class MainViewModel : ObservableObject
         {
             _batchTimer.Stop();
             IsRefreshing = false;
+            UpdateSummary(); // the final verdict, now that the refresh is over
             _refreshCts?.Dispose();
             _refreshCts = null;
             RestartTimer();
@@ -329,14 +339,14 @@ public sealed class MainViewModel : ObservableObject
     {
         ApplyBatch(results);
         if (countsAsRefresh) _lastRefresh = DateTimeOffset.Now;
-        AnnounceChanges();
+        if (!IsRefreshing) AnnounceChanges(); // during a refresh, its own end announces everything once
     }
 
     /// <summary>Shows whatever has arrived since the last batch.</summary>
     private void ApplyArrived()
     {
         var batch = new List<VendorStatus>();
-        while (_arrived.TryDequeue(out var r)) batch.Add(r);
+        while (_arrived.TryDequeue(out var item)) if (item.Generation == _refreshGeneration) batch.Add(item.Result);
         if (batch.Count > 0) ApplyBatch(batch);
     }
 
@@ -347,6 +357,7 @@ public sealed class MainViewModel : ObservableObject
         foreach (var r in results)
         {
             if (Cards.FirstOrDefault(c => c.Id == r.VendorId) is not { } card) continue; // settings changed mid-refresh
+            if (StatusChanges.IsStale(card.Data?.CheckedAt, r.CheckedAt)) continue; // a slow check overtaken by a newer refresh
             var old = card.Data?.Status;
             var oldStage = card.Data?.Stage ?? IncidentStage.None;
             card.Update(r);
@@ -354,7 +365,7 @@ public sealed class MainViewModel : ObservableObject
             // an incident moving on at the same status (Investigating → Monitoring); the tile glows only when the status changed.
             if (StatusChanges.ShouldNotify(old, oldStage, r.Status, r.Stage)) _changes.Add(new StatusChange(r.VendorName, old!.Value, r.Status, oldStage, r.Stage));
             if (StatusChanges.ShouldGlow(old, r.Status)) card.Glow();
-            _history.Record(r.VendorId, r.Status, r.CheckedAt);
+            _history.Record(r.VendorId, r.Status, r.CheckedAt, StatusHistory.GapFor(_config.RefreshIntervalMinutes));
             card.SetHistory(_history.BucketsFor(r.VendorId, now));
         }
         SortProblemsFirst();
@@ -371,7 +382,7 @@ public sealed class MainViewModel : ObservableObject
     private void SaveHistory()
     {
         _history.Prune(DateTimeOffset.Now);
-        _history.TrySave(_historyPath);
+        if (_keepHistory) _history.TrySave(_historyPath);
     }
 
     /// <summary>Every tile's strip moves along as the half hours pass, and durations keep counting.</summary>
@@ -575,6 +586,8 @@ public sealed class MainViewModel : ObservableObject
             Cards.Add(card);
         }
         RebuildView();
+        var now = DateTimeOffset.Now;
+        foreach (var c in Cards) c.SetHistory(_history.BucketsFor(c.Id, now)); // strips filled straight away, not on the next result
         Selected = Cards.FirstOrDefault(c => c.Id == selectedId);
         _baseOrder = Cards.Select((c, i) => (c.Id, i)).ToDictionary(x => x.Id, x => x.i);
         SortProblemsFirst();
@@ -691,6 +704,7 @@ public sealed class MainViewModel : ObservableObject
         (Settings, Vendors, Selected) = (null, null, null);
         _refreshCts?.Cancel();
         (_store, _config, Banner) = (store, config, store.LoadWarning);
+        _refreshGeneration++; // anything the old profile's refresh still delivers is dropped
         _arrived.Clear();
         foreach (var c in Cards) c.Logo = null;
         Cards.Clear(); // a fresh board: no state carried over from the other profile

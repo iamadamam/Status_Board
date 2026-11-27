@@ -7,11 +7,11 @@
   written outside the folder at runtime. The zip is made from a clean publish, so it never contains settings or cached logos;
   your profiles (statusboard.json, profiles.json, profile-*.json), history.json and logos\ in an existing artifacts\StatusBoard are kept.
 
-  -FrameworkDependent: a ~1 MB build that needs the .NET 10 Desktop Runtime installed on the PC.
+  -FrameworkDependent: a ~2 MB build that needs the .NET 10 Desktop Runtime installed on the PC.
   -SingleExe: one file; .NET extracts the WPF native DLLs to %TEMP%\.net on first run (so not zero-footprint).
   The exe is uncompressed by default: it is mapped from the file and shared with Windows' file cache, so it uses far less RAM
   than a compressed one (which is unpacked into private memory at startup). The zip download is about the same size either way.
-  -Compact: a compressed exe (~55 MB instead of ~118 MB on disk) that uses ~70 MB more RAM while running.
+  -Compact: a compressed exe (roughly half the ~135 MB on disk) that uses ~70 MB more RAM while running.
 
 .EXAMPLE
   .\build.ps1

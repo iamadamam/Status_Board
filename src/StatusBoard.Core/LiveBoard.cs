@@ -11,6 +11,10 @@ public static class StatusChanges
     public static bool ShouldGlow(ServiceStatus? previous, ServiceStatus current) =>
         previous is { } p && p != ServiceStatus.Unknown && current != ServiceStatus.Unknown && p != current;
 
+    /// <summary>A result checked before the one already shown (a slow website check landing after a newer refresh) is out of date.</summary>
+    public static bool IsStale(DateTimeOffset? shownCheckedAt, DateTimeOffset incomingCheckedAt) =>
+        shownCheckedAt is { } shown && incomingCheckedAt < shown;
+
     /// <summary>A notification also covers an incident moving on at the same status (Investigating → Monitoring).</summary>
     public static bool ShouldNotify(ServiceStatus? previous, IncidentStage previousStage, ServiceStatus current, IncidentStage currentStage) =>
         previous is { } p && p != ServiceStatus.Unknown && current != ServiceStatus.Unknown
@@ -69,6 +73,11 @@ public sealed class StatusHistory
     /// <summary>Two reports further apart than this are separate runs: the time between them is shown as "no data".</summary>
     public static readonly TimeSpan MaxGap = TimeSpan.FromMinutes(20);
 
+    /// <summary>The gap to allow at a refresh interval: twice the interval, never under <see cref="MaxGap"/>, so hourly refreshes
+    /// still read as one unbroken run while a long time with the app closed still shows as a gap.</summary>
+    public static TimeSpan GapFor(int refreshMinutes) =>
+        refreshMinutes > 0 && TimeSpan.FromMinutes(2 * refreshMinutes) > MaxGap ? TimeSpan.FromMinutes(2 * refreshMinutes) : MaxGap;
+
     /// <summary>One run of the same status from <see cref="From"/> to <see cref="To"/>.</summary>
     public sealed record Run([property: JsonPropertyName("f")] DateTimeOffset From, [property: JsonPropertyName("t")] DateTimeOffset To,
         [property: JsonPropertyName("s")] ServiceStatus Status);
@@ -78,10 +87,11 @@ public sealed class StatusHistory
     public StatusHistory() : this(new Dictionary<string, List<Run>>(StringComparer.OrdinalIgnoreCase)) { }
     private StatusHistory(Dictionary<string, List<Run>> runs) => _runs = runs;
 
-    public void Record(string vendorId, ServiceStatus status, DateTimeOffset at)
+    public void Record(string vendorId, ServiceStatus status, DateTimeOffset at, TimeSpan? maxGap = null)
     {
         if (!_runs.TryGetValue(vendorId, out var runs)) _runs[vendorId] = runs = [];
-        if (runs.Count > 0 && runs[^1] is var last && last.Status == status && at >= last.To && at - last.To <= MaxGap)
+        if (runs.Count > 0 && at < runs[^1].To) return; // out of order (an older result arriving late): the newer one stands
+        if (runs.Count > 0 && runs[^1] is var last && last.Status == status && at - last.To <= (maxGap ?? MaxGap))
             runs[^1] = last with { To = at };
         else runs.Add(new Run(at, at, status));
     }
