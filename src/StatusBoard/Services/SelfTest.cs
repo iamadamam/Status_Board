@@ -312,6 +312,33 @@ public sealed class SelfTest(App app, MainWindow w, MainViewModel vm, ThemeManag
                 await Settle();
             });
 
+            await Step("Tile glows on a status change, says how long, and shows its last 24 hours", async () =>
+            {
+                var a = vm.Cards.First(c => c.Id == "github");
+                Core.VendorStatus S(Core.ServiceStatus s, DateTimeOffset? started = null) => new()
+                {
+                    VendorId = a.Id, VendorName = a.Name, StatusPageUrl = a.StatusPageUrl,
+                    Sources = [Core.SourceResult.Of(a.Name, s == Core.ServiceStatus.Operational ? [] :
+                        [new Core.Incident { Title = "Scripted glow incident", Status = s, Started = started, LastUpdated = DateTimeOffset.Now }])],
+                };
+                vm.ApplyResults([S(Core.ServiceStatus.Operational)]);
+                await Task.Delay(CardViewModel.GlowLength + TimeSpan.FromMilliseconds(300)); // any earlier glow has finished
+                w.Scroller.ScrollToTop();
+                vm.ApplyResults([S(Core.ServiceStatus.MajorOutage, DateTimeOffset.Now.AddMinutes(-134))]);
+                await Settle();
+                await Task.Delay(250);
+                var glow = FindDescendants<Views.StatusIndicator>(w.CardsHost).FirstOrDefault(x => x.Name == "Glow" && ReferenceEquals(x.DataContext, a));
+                Check("tile glows after a status change", a.IsGlowing && glow is { Opacity: > 0.3 }, $"glowing {a.IsGlowing}, opacity {glow?.Opacity:0.00}");
+                await Shot("11g-glow");
+                Check("tile says how long the outage has lasted", a.DurationText == "for 2h 14m" && TextsUnder(w.CardsHost).Contains("for 2h 14m"), a.DurationText);
+                Check("24-hour strip on the tile", FindDescendants<Views.HistoryStrip>(w.CardsHost).Any(h => ReferenceEquals(h.DataContext, a) && h.Buckets is { Count: 48 } b && b[^1] == Core.ServiceStatus.MajorOutage));
+                await Task.Delay(CardViewModel.GlowLength + TimeSpan.FromMilliseconds(400));
+                Check("glow is gone after the pulses", !a.IsGlowing && glow is { Opacity: < 0.05 }, $"opacity {glow?.Opacity:0.00}");
+                await Shot("11h-glow-done");
+                vm.ApplyResults([S(Core.ServiceStatus.Operational)]);
+                await Settle();
+            });
+
             await Step("News ticker follows status changes and incident updates", async () =>
             {
                 // Scripted results for two real cards, fed through the same path a refresh uses.
@@ -900,7 +927,7 @@ public sealed class SelfTest(App app, MainWindow w, MainViewModel vm, ThemeManag
                 await Settle();
                 await Shot("20b-setup-vendors");
                 s.NextCommand.Execute(null);
-                Check("theme step", s.IsThemeStep && s.Themes.Count == 5);
+                Check("theme step", s.IsThemeStep && s.Themes.Count == ThemeChoice.All.Length, $"{s.Themes.Count} themes");
                 s.PickThemeCommand.Execute(s.Themes.Single(t => t.Name == "Hacker"));
                 await Settle();
                 Check("theme previews live", theme.Current == "Hacker");

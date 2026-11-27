@@ -62,14 +62,17 @@
                     Command="{Binding DataContext.SelectCardCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource VendorBadge}" Margin="0,0,12,0" VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" FontFamily="{DynamicResource DisplayFont}" TextTrimming="CharacterEllipsis"/>
                         <!-- Status, then the stage pill; on narrow tiles the pill moves to its own line rather than overflow or be cut short -->
                         <WrapPanel Margin="0,2,0,0">
                             <v:StatusIndicator Style="{StaticResource StatusText}" Status="{Binding Status}" OverrideText="{Binding StatusOverrideText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" VerticalAlignment="Center" Margin="0,1,0,1"/>
+                            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" VerticalAlignment="Center" Margin="0,1,8,1"/>
+                            <!-- How long the problem has lasted: "for 2h 14m" -->
+                            <TextBlock Text="{Binding DurationText}" FontSize="12" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" Margin="0,1,0,1"
+                                       ToolTip="How long this problem has lasted" Visibility="{Binding DurationText, Converter={StaticResource NullToCollapsed}}"/>
                         </WrapPanel>
                     </StackPanel>
                     <v:StatusIndicator Grid.Column="2" Style="{StaticResource StatusDot}" Status="{Binding Status}" VerticalAlignment="Top" Margin="8,0,0,0"/>
@@ -90,11 +93,37 @@
                             <Run Text="Affects " Foreground="{DynamicResource TextMuted}"/><Run Text="{Binding AffectedServicesText, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource Text}"/>
                         </TextBlock>
                     </DockPanel>
+                    <!-- The last 24 hours, half an hour per block -->
+                    <v:HistoryStrip Grid.Row="3" Grid.ColumnSpan="3" Height="6" Margin="0,12,0,0" Buckets="{Binding History}" ToolTip="{Binding HistoryTooltip}"
+                                    EmptyBrush="{DynamicResource Stroke}" OperationalBrush="{DynamicResource Status.Operational}" MaintenanceBrush="{DynamicResource Status.Maintenance}"
+                                    DegradedBrush="{DynamicResource Status.Degraded}" PartialBrush="{DynamicResource Status.PartialOutage}"
+                                    MajorBrush="{DynamicResource Status.MajorOutage}" UnknownBrush="{DynamicResource Status.Unknown}"
+                                    AutomationProperties.Name="Last 24 hours"/>
                 </Grid>
             </Button>
             <Border CornerRadius="14" BorderBrush="{DynamicResource Selection}" BorderThickness="2" IsHitTestVisible="False"
                     Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}"/>
+            <!-- Status just changed: a glow in the new status colour, one or two pulses, then gone -->
+            <v:StatusIndicator x:Name="Glow" Style="{StaticResource StatusGlow}" Status="{Binding Status}" Opacity="0"/>
         </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsGlowing}" Value="True">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard x:Name="GlowPulse">
+                        <Storyboard>
+                            <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity">
+                                <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                                <EasingDoubleKeyFrame KeyTime="0:0:0.35" Value="1"><EasingDoubleKeyFrame.EasingFunction><SineEase EasingMode="EaseOut"/></EasingDoubleKeyFrame.EasingFunction></EasingDoubleKeyFrame>
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.1" Value="0.15"><EasingDoubleKeyFrame.EasingFunction><SineEase EasingMode="EaseInOut"/></EasingDoubleKeyFrame.EasingFunction></EasingDoubleKeyFrame>
+                                <EasingDoubleKeyFrame KeyTime="0:0:1.45" Value="1"><EasingDoubleKeyFrame.EasingFunction><SineEase EasingMode="EaseOut"/></EasingDoubleKeyFrame.EasingFunction></EasingDoubleKeyFrame>
+                                <EasingDoubleKeyFrame KeyTime="0:0:2.5" Value="0"><EasingDoubleKeyFrame.EasingFunction><SineEase EasingMode="EaseIn"/></EasingDoubleKeyFrame.EasingFunction></EasingDoubleKeyFrame>
+                            </DoubleAnimationUsingKeyFrames>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions><RemoveStoryboard BeginStoryboardName="GlowPulse"/></DataTrigger.ExitActions>
+            </DataTrigger>
+        </DataTemplate.Triggers>
     </DataTemplate>
 
     <!-- List view row (compact table): logo, name, status + stage, what's wrong, last checked. Click opens details. -->
@@ -111,7 +140,12 @@
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <ContentPresenter Grid.RowSpan="2" Content="{Binding}" ContentTemplate="{StaticResource VendorBadgeSmall}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                    <!-- Name, then how long the problem has lasted; on narrow rows the name gives way first -->
+                    <DockPanel Grid.Column="1" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding DurationText}" FontSize="12" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" Margin="8,0,0,0"
+                                   ToolTip="How long this problem has lasted" Visibility="{Binding DurationText, Converter={StaticResource NullToCollapsed}}"/>
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <v:StatusIndicator Status="{Binding Status}" OverrideText="{Binding StatusOverrideText}" VerticalAlignment="Center"/>
                         <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource StagePill}" Margin="6,0,0,0" VerticalAlignment="Center"/>

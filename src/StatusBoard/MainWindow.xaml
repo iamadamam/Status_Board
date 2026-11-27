@@ -36,11 +36,47 @@
                     <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="9" Margin="8,2,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}"/>
                 </StackPanel>
             </Button>
-            <StackPanel x:Name="ClockPanel" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="{Binding ClockSpoken}">
-                <TextBlock x:Name="ClockTime" Text="{Binding ClockText}" FontFamily="{DynamicResource DisplayFont}" FontSize="45" FontWeight="SemiBold" HorizontalAlignment="Center"
-                           Typography.NumeralAlignment="Tabular" Margin="0,-6,0,-3"/>
-                <TextBlock x:Name="ClockDate" Text="{Binding DateText}" FontSize="18" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
-            </StackPanel>
+            <!-- Clock, which every few minutes cross-fades to the year-progress bar for 15 s (Settings) -->
+            <Grid x:Name="ClockPanel" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="{Binding ClockSpoken}">
+                <StackPanel x:Name="ClockFace">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ShowYearProgress}" Value="True">
+                                    <DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.5"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.5"/></Storyboard></BeginStoryboard></DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock x:Name="ClockTime" Text="{Binding ClockText}" FontFamily="{DynamicResource DisplayFont}" FontSize="45" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular" Margin="0,-6,0,-3"/>
+                    <TextBlock x:Name="ClockDate" Text="{Binding DateText}" FontSize="18" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
+                </StackPanel>
+                <!-- Same width as the clock, so the header never jumps; the detail line hides when the date does (narrow windows) -->
+                <StackPanel x:Name="YearFace" Width="{Binding ActualWidth, ElementName=ClockFace}" VerticalAlignment="Center" Opacity="0" IsHitTestVisible="False"
+                            AutomationProperties.Name="{Binding YearSpoken}">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ShowYearProgress}" Value="True">
+                                    <DataTrigger.EnterActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.5"/></Storyboard></BeginStoryboard></DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions><BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.5"/></Storyboard></BeginStoryboard></DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock x:Name="YearPercent" Text="{Binding YearPercentText}" FontFamily="{DynamicResource DisplayFont}" FontSize="34" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Typography.NumeralAlignment="Tabular" Margin="0,-4,0,2"/>
+                    <Grid Height="8" Margin="6,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="{Binding YearDoneLength}"/><ColumnDefinition Width="{Binding YearLeftLength}"/></Grid.ColumnDefinitions>
+                        <Border Grid.ColumnSpan="2" CornerRadius="4" Background="{DynamicResource Stroke}"/>
+                        <Border CornerRadius="4" Background="{DynamicResource Accent}"/>
+                    </Grid>
+                    <TextBlock Text="{Binding YearDetailText}" FontSize="14" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"
+                               Visibility="{Binding Visibility, ElementName=ClockDate}"/>
+                </StackPanel>
+            </Grid>
             <!-- Centred vertically: the clock is taller than the buttons, which would otherwise stretch to its height -->
             <DockPanel x:Name="HeaderControls" Grid.ColumnSpan="3" LastChildFill="False" HorizontalAlignment="Right" VerticalAlignment="Center">
             <!-- TV mode: a quiet way out instead of the controls -->

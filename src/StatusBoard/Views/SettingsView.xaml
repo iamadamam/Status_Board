@@ -88,6 +88,16 @@
                         <TextBlock Text="Runs along the bottom of the status bar with the latest update on each active incident. Hover to pause, click to open." Style="{StaticResource Muted}"/>
                     </StackPanel>
                 </CheckBox>
+                <!-- Year progress: the header clock steps aside now and then (it also keeps the one fixed element on a wall screen moving) -->
+                <CheckBox x:Name="YearProgressCheck" IsChecked="{Binding YearProgressCycle}" Margin="0,10,0,0" AutomationProperties.Name="Show year progress in place of the clock">
+                    <StackPanel>
+                        <TextBlock Text="Show year progress in place of the clock"/>
+                        <TextBlock Text="Every so often the clock steps aside for 15 seconds to show how far through the year we are." Style="{StaticResource Muted}"/>
+                    </StackPanel>
+                </CheckBox>
+                <ComboBox x:Name="YearProgressBox" ItemsSource="{Binding YearProgressOptions}" DisplayMemberPath="Label" SelectedValuePath="Minutes"
+                          SelectedValue="{Binding YearProgressIntervalMinutes}" MinWidth="160" HorizontalAlignment="Left" Margin="28,8,0,0"
+                          IsEnabled="{Binding YearProgressCycle}" AutomationProperties.Name="How often to show year progress"/>
 
                 <!-- Vendor logos: pick a vendor, upload an image; it's trimmed and centred on a white tile like the built-in logos -->
                 <TextBlock Text="VENDOR LOGOS" Style="{StaticResource SectionLabel}" Margin="0,26,0,4"/>

@@ -16,7 +16,8 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Func<VendorConfig, Task<ImageSource?>> _logo;
     private int _refresh;
     private string _theme;
-    private bool _tray, _ticker;
+    private bool _tray, _ticker, _yearCycle;
+    private int _yearInterval;
     private LogoChoiceViewModel? _logoVendor;
     private string? _logoMessage;
     private bool _logoMessageIsError;
@@ -25,6 +26,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         (_draft, _logo, ConfigPath) = (draft, logo, configPath);
         (_refresh, _theme, _tray, _ticker) = (draft.RefreshIntervalMinutes, draft.Theme, draft.TrayIcon, draft.NewsTicker);
+        (_yearCycle, _yearInterval) = (draft.YearProgressCycle, YearProgress.NormaliseInterval(draft.YearProgressIntervalMinutes));
 
         var choices = AppConfig.RefreshChoices.ToList();
         if (!choices.Contains(_refresh)) choices.Insert(choices.FindIndex(m => m == 0 || m > _refresh) is var i and >= 0 ? i : choices.Count - 1, _refresh);
@@ -49,6 +51,11 @@ public sealed class SettingsViewModel : ObservableObject
     public string Theme { get => _theme; set => Set(ref _theme, value); }
     public bool TrayIcon { get => _tray; set => Set(ref _tray, value); }
     public bool NewsTicker { get => _ticker; set => Set(ref _ticker, value); }
+    /// <summary>The header clock shows the year-progress bar now and then.</summary>
+    public bool YearProgressCycle { get => _yearCycle; set => Set(ref _yearCycle, value); }
+    public int YearProgressIntervalMinutes { get => _yearInterval; set => Set(ref _yearInterval, value); }
+    public IReadOnlyList<RefreshOption> YearProgressOptions { get; } =
+        YearProgress.IntervalChoices.Select(m => new RefreshOption(m, m == 60 ? "Every hour" : m == 1 ? "Every minute" : $"Every {m} minutes")).ToList();
 
     public ICommand SaveCommand { get; }
     public ICommand CancelCommand { get; }
@@ -113,6 +120,7 @@ public sealed class SettingsViewModel : ObservableObject
     private AppConfig Apply()
     {
         (_draft.RefreshIntervalMinutes, _draft.Theme, _draft.TrayIcon, _draft.NewsTicker) = (_refresh, _theme, _tray, _ticker);
+        (_draft.YearProgressCycle, _draft.YearProgressIntervalMinutes) = (_yearCycle, _yearInterval);
         foreach (var l in LogoVendors) l.Apply();
         return _draft;
     }
