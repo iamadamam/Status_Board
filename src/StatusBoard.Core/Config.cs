@@ -13,8 +13,14 @@ public sealed class AppConfig
     public static readonly int[] RefreshChoices = [1, 3, 5, 15, 30, 60, 0];
 
     public int RefreshIntervalMinutes { get; set; } = 5;
-    /// <summary>"System", "Light", "Dark", "AMOLED" or "Hacker".</summary>
+    /// <summary>The themes besides "System" (which follows Windows' light or dark setting).</summary>
+    public static readonly string[] ThemeNames = ["Light", "Dark", "AMOLED", "Hacker", "Obsidianite"];
+
+    /// <summary>"System" or one of <see cref="ThemeNames"/>.</summary>
     public string Theme { get; set; } = "System";
+    /// <summary>Every <see cref="YearProgressIntervalMinutes"/> the header clock shows how far through the year we are, for 15 s.</summary>
+    public bool YearProgressCycle { get; set; } = true;
+    public int YearProgressIntervalMinutes { get; set; } = YearProgress.DefaultIntervalMinutes;
     public bool TrayIcon { get; set; }
     public double DetailsPanelWidth { get; set; } = 440;
     /// <summary>Tile size multiplier (Ctrl +/− in the app).</summary>
@@ -167,7 +173,8 @@ public sealed class ConfigStore(string path)
         c.RefreshIntervalMinutes = c.RefreshIntervalMinutes <= 0 ? 0 : Math.Min(c.RefreshIntervalMinutes, 24 * 60);
         c.DetailsPanelWidth = double.IsFinite(c.DetailsPanelWidth) ? Math.Clamp(c.DetailsPanelWidth, 300, 1200) : 440;
         c.CardScale = double.IsFinite(c.CardScale) && c.CardScale > 0 ? Math.Clamp(Math.Round(c.CardScale, 2), MinCardScale, MaxCardScale) : 1.0;
-        c.Theme = new[] { "Light", "Dark", "AMOLED", "Hacker" }.FirstOrDefault(t => string.Equals(t, c.Theme?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "System";
+        c.Theme = AppConfig.ThemeNames.FirstOrDefault(t => string.Equals(t, c.Theme?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "System";
+        c.YearProgressIntervalMinutes = YearProgress.NormaliseInterval(c.YearProgressIntervalMinutes);
         c.BoardView = string.Equals(c.BoardView?.Trim(), "List", StringComparison.OrdinalIgnoreCase) ? "List" : "Tiles";
         // Groups: unique ids and names; vendors pointing at a missing group become ungrouped.
         var groupIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
